@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Дикая поездка: Мафия</title>
+<title>Дикая поездка</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Golos+Text:wght@400;500;700&display=swap" rel="stylesheet">
@@ -109,6 +109,7 @@ td.n{text-align:right;font-weight:700;color:var(--amber)}
 label.btn{display:flex;align-items:center;justify-content:center}
 .bigq{font-size:44px;text-align:center;padding:14px 8px;background:var(--ink2);border:1px solid var(--line);border-radius:14px;letter-spacing:.06em;font-family:var(--display);word-break:break-word}
 .bigq.txt{font-family:var(--body);font-size:20px;letter-spacing:0;font-weight:500;line-height:1.35}
+.otimer{color:var(--amber);text-transform:none;letter-spacing:0}
 .sdisp{font-family:var(--display);font-size:64px;text-align:center;color:var(--amber);font-variant-numeric:tabular-nums;padding:8px 0}
 </style>
 </head>
@@ -283,7 +284,7 @@ const BOT_ANSWER=['Хороший вопрос. Я думаю, это {X}.','Н�
 const STORE={get(k,d){try{const v=localStorage.getItem('wt_'+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem('wt_'+k,JSON.stringify(v));}catch(e){}}};
 const USED=STORE.get('used',{});
 /* ---------- Telegram Mini App: подключается, только если игра открыта внутри Telegram ---------- */
-const TG={w:null,user:null};
+const TG={w:null,user:null};let TG_PENDING=false;
 function haptic(kind){
   const h=TG.w&&TG.w.HapticFeedback;if(!h)return;
   try{if(kind==='success'||kind==='error'||kind==='warning')h.notificationOccurred(kind);else h.impactOccurred(kind||'light');}catch(e){}
@@ -302,7 +303,9 @@ function initTG(){
 (function loadTG(){
   const inTG=/tgWebApp/.test(location.hash+location.search)||window.TelegramWebviewProxy||(window.parent!==window&&/tgWebApp/.test(document.referrer));
   if(!inTG)return;
-  const s=document.createElement('script');s.src='https://telegram.org/js/telegram-web-app.js';s.onload=initTG;document.head.appendChild(s);
+  TG_PENDING=true;
+  const s=document.createElement('script');s.src='https://telegram.org/js/telegram-web-app.js';
+  s.onload=()=>{initTG();TG_PENDING=false;bootOnline();};s.onerror=()=>{TG_PENDING=false;bootOnline();};document.head.appendChild(s);
 })();
 
 let S, timers=[];
@@ -422,12 +425,13 @@ function scene(kind){
 }
 
 /* ---------- каркас ---------- */
+function render(){if(MODE==='training')renderTraining();else orender();}
 function topbar(){
   const st=STEP_OF[S.screen];
   const bar=S.screen==='intro'?'':`<div class="steps">${STEPS.map((s,i)=>`<i class="${i<st?'on':i===st?'now':''}"></i>`).join('')}</div><div class="stepname">Раунд ${S.round} · ${STEPS[st]}</div>`;
   return `<div class="top"><div class="brand">ДИКАЯ ПОЕЗДКА</div><div class="pts">Очки <span>${total()}</span></div></div>${bar}`;
 }
-function render(){
+function renderTraining(){
   const f=SCREENS[S.screen];
   $('#app').innerHTML=topbar()+f.html();
   if(f.after)f.after();
@@ -447,6 +451,7 @@ intro:{html:()=>`${scene('night')}<div class="body">
   <p class="story"><small>Рассказчик</small>Семеро участников экспедиции встали лагерем в степи. Каждую ночь один квадроцикл выходит из строя, каждый день лагерь решает, кого исключить. Играем до победы одной из сторон.</p>
   <div class="card"><b>Фото игроков</b><p class="muted" style="font-size:14px;margin:4px 0 8px">Фото появятся у костра, в списках, на карточках выбывших и в конкурсе «Чьё лицо?». Здесь можно загрузить фото за каждого, в настоящей игре каждый добавляет своё.</p>
   <div class="list">${NAMES.map((n,i)=>`<div class="photorow">${avHtml({id:i,name:n},44)}<span class="nm">${i===0?'Ты':n}</span><label class="btn ghost small">${S.photos[i]?'Заменить':'Загрузить'}<input type="file" accept="image/*" hidden data-pid="${i}" aria-label="Фото: ${n}"></label></div>`).join('')}</div></div>
+  <button class="btn ghost small" data-a="tomenu" style="align-self:flex-start">← В меню</button>
   <h2>Выбери роль</h2>
   <div class="grid2">${Object.entries(ROLES).map(([k,r])=>`<button class="role" data-a="pickRole" data-v="${k}"><b>${r.n}</b><span>${r.desc}</span></button>`).join('')}</div>
   <p class="muted" style="font-size:14px">Пока это одиночный режим: остальные игроки придуманы. Фото остаются на твоём телефоне и никуда не отправляются.</p></div>`},
@@ -556,7 +561,7 @@ final:{html:()=>{
   <h2>Достижения</h2>
   ${S.badges.length?S.badges.map(b=>`<div class="badge"><div class="ic">${b[0]}</div><div><b>${b}</b><div class="muted" style="font-size:14px">${BADGE_TEXT[b]}</div></div></div>`).join(''):'<p class="muted">Достижений нет. Выполняй тайные задания и побеждай в конкурсах.</p>'}
   <h2>Рейтинг игры</h2><table>${rate.map((r,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:10px">${i+1}. ${avHtml(r.p,28)}${esc(r.p.name)}</span></td><td class="n">${r.pts}</td></tr>`).join('')}</table>
-  <button class="btn" data-a="again">Сыграть ещё раз</button></div>`;}}
+  <button class="btn" data-a="again">Сыграть ещё раз</button><button class="btn ghost" data-a="tomenu">В главное меню</button></div>`;}}
 };
 const BADGE_TEXT={'Хамелеон':'Выполнил тайное задание.','Фотограф':'Выполнил фотозадание.','Зоркий глаз':'Проголосовал против диверсанта.','Железная память':'Прошёл ночную игру на память.','Знаток трассы':'Ответил верно на все вопросы конкурса.','Ночной гость':'Диверсия прошла успешно.','Вовремя починил':'Спас игрока от диверсии.','Следопыт-ас':'Нашёл диверсанта по следам.','Выживший':'Дожил до конца игры.','Меткий палец':'Выиграл конкурс на реакцию.','Детектор лжи':'Без ошибок в «Правде или выдумке».','Шифровальщик':'Разгадал все поговорки в эмодзи.','Грамотей':'Собрал все слова из букв.','Калькулятор':'Решил все примеры в «Быстром счёте».','Физиономист':'Узнал всех по фото.','Стальные нервы':'Выиграл «Стоп-кран».'};
 
@@ -589,7 +594,8 @@ const ACT={
   vsend:()=>{tallyVotes(S.vote.choice);go('result');},
   toNext:()=>{if(winner()){finalScoring();go('final');}else nextRound();},
   specNext:()=>{if(S.spec.end){finalScoring();go('final');}else nextRound();},
-  again:()=>{newGame(true);render();}
+  again:()=>{newGame(true);render();},
+  tomenu:()=>{clearTimers();MODE='menu';render();}
 };
 
 /* ---------- ночь ---------- */
@@ -873,7 +879,315 @@ function finalScoring(){setTimeout(()=>{const b=STORE.get('best',0);if(total()>b
   if((w==='saboteurs')===myBad)addPts(4,'Победа твоей стороны');
 }
 
-newGame(false);render();
+newGame(false);
+/* ================= СЕТЕВАЯ ИГРА ================= */
+let MODE='menu';                 // menu | online | training
+const O={ws:null,st:null,code:'',link:'',photos:{},chat:[],retry:0,name:'',err:'',until:0,loc:{},want:null,connecting:false};
+const ROLE_N={saboteur:'Диверсант',mechanic:'Механик',tracker:'Следопыт',tourist:'Турист'};
+const ROLE_D={saboteur:'Ночью вместе с напарниками выбираешь, чей квадроцикл вывести из строя. Днём притворяйся туристом.',mechanic:'Ночью чинишь машину одного игрока. Если диверсанты выбрали его, он остаётся в игре.',tracker:'Ночью идёшь по следам и узнаёшь, диверсант ли выбранный игрок.',tourist:'Ночью стережёшь костёр: пройди игру на память и услышишь шаги.'};
+const OSTEPS={night:0,morning:1,day:2,contest:3,vote:4,result:5};
+
+function devUser(){const q=new URLSearchParams(location.search);return q.get('dev')?{id:+q.get('uid')||Math.floor(Math.random()*1e9),first_name:q.get('name')||'Тестер'}:null;}
+function canOnline(){return !!(TG.w&&TG.w.initData)||!!devUser();}
+function startParam(){
+  const sp=TG.w&&TG.w.initDataUnsafe&&TG.w.initDataUnsafe.start_param;
+  if(sp)return sp;const q=new URLSearchParams(location.search);return q.get('tgWebAppStartParam')||q.get('room')||'';
+}
+
+/* ---------- соединение ---------- */
+function oconnect(){
+  if(O.ws&&O.ws.readyState<2)return;
+  O.connecting=true;
+  const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');O.ws=ws;
+  ws.onopen=()=>{O.retry=0;O.connecting=false;ws.send(JSON.stringify({t:'hello',init:TG.w?TG.w.initData:'',dev:devUser(),room:O.code||O.want||''}));O.want=null;};
+  ws.onmessage=e=>{let d;try{d=JSON.parse(e.data);}catch(x){return;}onMsg(d);};
+  ws.onclose=()=>{O.connecting=false;if(MODE!=='online')return;O.retry=Math.min(O.retry+1,6);
+    if(O.st)toast('Связь прервалась, переподключаюсь…');setTimeout(()=>{if(MODE==='online')oconnect();},600*O.retry);};
+}
+function osend(m){if(O.ws&&O.ws.readyState===1)O.ws.send(JSON.stringify(m));else toast('Нет связи с лагерем, подожди секунду');}
+function onMsg(d){
+  if(d.t==='state'){
+    if(MODE==='menu')MODE='online';
+    const prev=O.st;O.st=d;O.until=Date.now()+d.left*1000;
+    const key=d.phase+':'+d.round;
+    if(!prev||prev.phase+':'+prev.round!==key){O.loc={};if(prev&&d.phase!=='lobby')haptic('medium');window.scrollTo(0,0);}
+    orender();return;
+  }
+  if(d.t==='joined'){O.code=d.code;O.link=d.link;O.chat=[];return;}
+  if(d.t==='photo'){O.photos[d.id]=d.data;return;}
+  if(d.t==='chat_history'){O.chat=d.items||[];return;}
+  if(d.t==='chat'){O.chat.push(d.m);if(O.chat.length>200)O.chat.shift();ochatAdd(d.m);return;}
+  if(d.t==='toast'){toast(d.text);haptic('success');return;}
+  if(d.t==='error'){toast(d.text);haptic('error');return;}
+  if(d.t==='nolobby'){O.st=null;O.code='';if(d.name)O.name=d.name;
+    if(O.pendingCreate){O.pendingCreate=false;osend({t:'create'});return;}
+    MODE='menu';orender();return;}
+  if(d.t==='fatal'){O.err=d.text;O.st=null;MODE='menu';orender();}
+}
+
+/* ---------- помощники ---------- */
+const OP=id=>O.st&&O.st.players.find(p=>p.id===id);
+const ome=()=>OP(O.st.me);
+const oalive=()=>O.st.players.filter(p=>p.alive&&!p.spect);
+function oav(p,sz){sz=sz||38;const ph=O.photos[p.id];
+  if(ph)return `<img class="av" alt="" src="${ph}" style="width:${sz}px;height:${sz}px">`;
+  return `<div class="av" style="width:${sz}px;height:${sz}px;background:${COLORS[Math.abs(p.id)%COLORS.length]}">${esc(p.name[0]||'?')}</div>`;}
+function obox(p){const ph=O.photos[p.id];return ph?`<img src="${ph}" alt="${esc(p.name)}">`:`<div class="ph" style="background:${COLORS[Math.abs(p.id)%COLORS.length]}">${esc(p.name[0]||'?')}</div>`;}
+function ogallery(){return `<div class="gal">${O.st.players.filter(p=>!p.spect).map(p=>`<div class="pol ${p.alive?'':'out'}">${obox(p)}<span>${esc(p.name)}${p.bot?' 🤖':''}</span></div>`).join('')}</div>`;}
+function oleft(){return Math.max(0,Math.ceil((O.until-Date.now())/1000));}
+function otop(){
+  const st=O.st;const s=st?OSTEPS[st.phase]:undefined;
+  const bar=s===undefined?'':`<div class="steps">${STEPS.map((x,i)=>`<i class="${i<s?'on':i===s?'now':''}"></i>`).join('')}</div><div class="stepname">Раунд ${st.round} · ${STEPS[s]} <span id="otimer" class="otimer">${oleft()?'· '+oleft()+' с':''}</span></div>`;
+  return `<div class="top"><div class="brand">ДИКАЯ ПОЕЗДКА</div><div class="pts">${st&&st.my?`Очки <span>${st.my.pts}</span>`:(st?'Лагерь <span>'+esc(st.code)+'</span>':'')}</div></div>${bar}`;
+}
+setInterval(()=>{const t=document.getElementById('otimer');if(t&&MODE==='online'){const l=oleft();t.textContent=l?'· '+l+' с':'';}},1000);
+function readyBtn(label){const st=O.st;const hs=st.players.filter(p=>p.alive&&!p.bot&&p.online&&!p.spect);const n=st.ready.filter(id=>hs.some(p=>p.id===id)).length;
+  const mine=st.ready.includes(st.me);
+  return `<button class="btn ${mine?'ghost':''}" data-a="oready" ${mine?'disabled':''}>${mine?'Ждём остальных':label} · ${n}/${hs.length}</button>`;}
+
+/* ---------- меню ---------- */
+function rmenu(){
+  const on=canOnline();
+  return `${topbar0()}${scene('night')}<div class="body">
+  <h1>Ночной заезд</h1>
+  ${TG.user?`<p class="muted">Привет, ${esc(TG.user.first_name||'путник')}!</p>`:''}
+  <p class="story"><small>Рассказчик</small>Экспедиция встала лагерем в степи. Среди вас диверсанты: каждую ночь один квадроцикл выходит из строя. Днём у костра лагерь ищет виновных, между раундами конкурсы, у каждого тайное задание.</p>
+  ${O.err?`<div class="card"><b>${esc(O.err)}</b></div>`:''}
+  ${on?`<button class="btn" data-a="ocreate">Создать лагерь для друзей</button>
+  <div class="row"><input id="ocode" maxlength="5" placeholder="Код лагеря" autocomplete="off" style="text-transform:uppercase" aria-label="Код лагеря"><button class="btn ghost" data-a="ojoin">Войти</button></div>`
+  :`<div class="card"><b>Игра с друзьями</b><p class="muted" style="margin-top:4px">Сетевая игра открывается через бота в Telegram: кнопка «Играть» в чате с ботом или ссылка из группы.</p></div>`}
+  <button class="btn ghost" data-a="otrain">Тренировка с ботами</button>
+  <p class="muted" style="font-size:14px">От 5 игроков. Если друзей меньше, недостающих добавят боты.</p></div>`;
+}
+function topbar0(){return `<div class="top"><div class="brand">ДИКАЯ ПОЕЗДКА</div><div class="pts"></div></div>`;}
+
+/* ---------- лобби ---------- */
+function rlobby(){
+  const st=O.st;const host=st.host===st.me;const humans=st.players.filter(p=>!p.bot);
+  const need=Math.max(0,5-humans.length);
+  return `${scene('night')}<div class="body">
+  <span class="tag">Лагерь ${esc(st.code)}</span><h2>Собираем экспедицию</h2>
+  <div class="card"><div class="list">${humans.map(p=>`<div class="photorow">${oav(p,44)}<span class="nm">${esc(p.name)}${p.id===st.host?' · ведущий':''}${p.id===st.me?' (ты)':''}</span></div>`).join('')}</div></div>
+  <div class="row"><button class="btn" style="flex:1" data-a="oinvite">Позвать друзей</button>
+  <label class="btn ghost" style="flex:1">${O.photos[st.me]?'Сменить фото':'Своё фото'}<input type="file" accept="image/*" hidden data-ophoto="1" aria-label="Своё фото"></label></div>
+  <p class="muted" style="font-size:14px">Фото увидят только игроки этого лагеря. После игры оно удаляется с сервера.</p>
+  ${host?`<button class="btn" data-a="ostart" data-v="0" ${need?'disabled':''}>${need?`Нужно ещё ${need}`:'Начать игру'}</button>
+  ${need?`<button class="btn ghost" data-a="ostart" data-v="1">Начать, добрав ${need} ботов</button>`:''}`
+  :`<div class="story"><small>Рассказчик</small>Ждём, пока ведущий начнёт игру.</div>`}
+  ${ochatBlock(false)}
+  <button class="btn ghost" data-a="oleave">Выйти из лагеря</button></div>`;
+}
+
+/* ---------- ночь ---------- */
+function rnight(){
+  const st=O.st,me=ome(),role=st.my.role,n=st.night||{};
+  const task=st.my.task?`<div class="task ${st.my.task.done?'done':''}"><b>Тайное задание раунда</b><br>${esc(st.my.task.text)} За выполнение 2 очка.</div>`:'';
+  let act='';
+  const mates=st.players.filter(p=>p.role==='saboteur'&&p.id!==st.me&&p.alive);
+  if(role==='tourist'){
+    act=`<h2>Ты стережёшь костёр</h2><p class="muted">Запомни порядок огней и повтори его.</p>
+    <div class="pads">${['#F29A2E','#9DB05F','#E8664C','#7FB3C9'].map((c,i)=>`<button class="pad" id="opad${i}" data-a="opad" data-v="${i}" style="background:${c}" aria-label="Огонь ${i+1}"></button>`).join('')}</div>
+    <p id="omemst" class="muted">${n.done?'Готово. Ждём утра.':'Смотри внимательно…'}</p>`;
+  }else{
+    const title={saboteur:'Кого выведем из строя?',mechanic:'Чью машину чиним?',tracker:'По чьим следам идём?'}[role];
+    const list=oalive().filter(p=>role==='mechanic'?true:p.id!==st.me&&!(role==='saboteur'&&p.role==='saboteur'));
+    const picks=n.mates_pick||{};
+    act=`<h2>${title}</h2>${mates.length?`<p class="muted">Напарники: <b style="color:var(--sand)">${mates.map(m=>esc(m.name)).join(', ')}</b>. Их выбор виден в списке.</p>`:''}
+    <div class="list">${list.map(p=>{const who=Object.entries(picks).filter(([k,t])=>t===p.id&&+k!==st.me).map(([k])=>OP(+k)&&OP(+k).name);
+      return `<button class="pl ${n.target===p.id?'sel':''}" data-a="onight" data-v="${p.id}" ${n.done?'disabled':''}>${oav(p)}<span class="nm">${p.id===st.me?'Ты сам':esc(p.name)}</span>${who.length?`<span class="sub">${who.map(esc).join(', ')}</span>`:''}</button>`;}).join('')}</div>
+    ${n.info?`<div class="card"><b>${esc(n.info.name)}</b>: ${n.info.bad?'следы ведут к диверсанту. <span class="tag bad">Диверсант</span>':'следы чистые. <span class="tag good">Не диверсант</span>'}</div>`:''}
+    ${n.done?'<p class="muted">Ход сделан. Ждём, пока походят остальные.</p>':''}`;
+  }
+  return `${scene('night')}<div class="body"><div class="story"><small>Ночь ${st.round}</small>${esc(st.story)} Ты ${ROLE_N[role]==='Турист'?'турист':'— '+ROLE_N[role].toLowerCase()}.</div>
+  <div class="card"><span class="tag">Твоя роль</span><h2 style="margin:6px 0 4px">${ROLE_N[role]}</h2><p class="muted" style="font-size:14px">${ROLE_D[role]}</p></div>${act}${task}</div>`;
+}
+let OSEQ=[];
+function ostartMemory(){
+  const st=O.st;if(O.loc.mem||st.night.done)return;
+  const len=Math.min(7,3+st.round);O.loc.mem={input:[],ready:false};OSEQ=Array.from({length:len},()=>rnd(4));
+  const lit=(i,on)=>{const el=document.getElementById('opad'+i);if(el)el.classList.toggle('lit',on);};
+  OSEQ.forEach((k,i)=>{setTimeout(()=>lit(k,true),900+i*750);setTimeout(()=>lit(k,false),900+i*750+420);});
+  setTimeout(()=>{if(!O.loc.mem)return;O.loc.mem.ready=true;const s=document.getElementById('omemst');if(s)s.textContent='Теперь повтори порядок.';},900+OSEQ.length*750);
+}
+function opad(i){
+  const m=O.loc.mem;if(!m||!m.ready||m.end)return;
+  const el=document.getElementById('opad'+i);if(el){el.classList.add('lit');setTimeout(()=>el.classList.remove('lit'),200);}
+  m.input.push(i);haptic('light');
+  if(OSEQ[m.input.length-1]!==i){m.end=true;osend({t:'mem',ok:false});return;}
+  if(m.input.length===OSEQ.length){m.end=true;osend({t:'mem',ok:true});}
+}
+
+/* ---------- утро ---------- */
+function rmorning(){
+  const st=O.st,m=st.morning||{},v=m.victim,me=ome();
+  const lost=v&&!m.saved;
+  const head=!v?'Утро в лагере.':lost?(v.id===st.me?`Ночью вышел из строя твой квадроцикл. Ты выбываешь и дальше наблюдаешь. Твоя роль: <b>${ROLE_N[v.role]}</b>.`:`Ночью вышел из строя квадроцикл. Выбывает <b>${esc(v.name)}</b>, роль: <b>${ROLE_N[v.role]}</b>.`):'Ночью кто-то пытался испортить чужую машину, но механик успел её починить. Никто не выбыл.';
+  const vp=v&&OP(v.id);
+  return `${scene('dawn')}<div class="body"><div class="story"><small>Утро ${st.round}</small>${head}</div>
+  ${lost&&vp?`<div class="card" style="display:flex;gap:14px;align-items:center">${O.photos[vp.id]?`<img class="big" src="${O.photos[vp.id]}" alt="${esc(vp.name)}" style="filter:grayscale(1)">`:oav(vp,80)}<div><b>${esc(vp.name)}</b><br><span class="tag bad">Выбыл</span></div></div>`:''}
+  ${m.hint?`<div class="card"><span class="tag good">Твоя подсказка</span><p style="margin-top:8px">${esc(m.hint)}</p></div>`:''}
+  ${m.info?`<div class="card"><span class="tag">Следы прошлой ночи</span><p style="margin-top:8px"><b>${esc(m.info.name)}</b>: ${m.info.bad?'диверсант':'не диверсант'}.</p></div>`:''}
+  ${m.event?`<div class="card"><span class="tag">Событие утра</span><h2 style="margin:8px 0 6px">${esc(m.event.title)}</h2><p>${esc(m.event.text)}</p></div>`:''}
+  <div class="card"><b>В лагере осталось ${oalive().length}</b>${ogallery()}</div>
+  ${me.alive?readyBtn('К костру, обсуждать'):'<p class="muted">Ты наблюдаешь со стороны.</p>'}</div>`;
+}
+
+/* ---------- день ---------- */
+function ochatBlock(withInput){
+  const st=O.st,me=ome();const can=withInput!==false||st.phase==='lobby'||st.phase==='final';
+  return `<div class="chat" id="chat" aria-live="polite"></div>
+  ${can&&(me.alive||st.phase==='lobby'||st.phase==='final')?`<div class="row"><input id="msg" type="text" placeholder="Напиши или продиктуй" autocomplete="off" maxlength="400" aria-label="Сообщение"><button class="btn" data-a="osend">Отправить</button></div>
+  <div class="row"><button class="btn ghost" style="flex:1" data-a="dictate" id="dict">Голосом</button><label class="btn ghost" style="flex:1">Фото в чат<input type="file" accept="image/*" hidden data-ochat="1" aria-label="Фото в чат"></label></div>
+  <p id="dictst" class="muted" style="font-size:14px" aria-live="polite"></p>`:''}`;
+}
+function ochatAdd(m){const c=document.getElementById('chat');if(!c)return;
+  const d=document.createElement('div');d.className='msg'+(m.from===O.st.me?' me':'');
+  const b=document.createElement('b');b.textContent=m.name;d.appendChild(b);
+  if(m.text)d.appendChild(document.createTextNode(m.text));
+  if(m.img){const im=document.createElement('img');im.src=m.img;im.alt='Фото из чата';d.appendChild(im);}
+  c.appendChild(d);c.scrollTop=c.scrollHeight;}
+function rday(){
+  const st=O.st,me=ome(),t=st.my.task;
+  return `${scene('dusk')}<div class="body"><h2>Обсуждение у костра</h2>${ogallery()}
+  ${me.alive&&t?`<div class="task ${t.done?'done':''}" id="task">${t.done?'<b>Задание выполнено</b>':`<b>Тайное задание${t.need>1?' ('+t.prog+' из '+t.need+')':''}</b><br>${esc(t.text)}`}</div>`:''}
+  ${me.alive?`<div class="chips">${oalive().filter(p=>p.id!==st.me).map(p=>`<button class="chip" data-a="chip" data-v="Подозреваю ${esc(p.name)}">Подозреваю ${esc(p.name)}</button>`).join('')}</div>`:'<p class="muted">Ты выбыл и только читаешь чат.</p>'}
+  ${ochatBlock(true)}
+  ${me.alive?readyBtn('Готов к конкурсу'):''}</div>`;
+}
+
+/* ---------- конкурс ---------- */
+function rcontest(){
+  const st=O.st,c=st.contest,me=ome();
+  if(!me.alive)return `${scene('dusk')}<div class="body"><span class="tag">Конкурс «${esc(c.title)}»</span><h2>Живые игроки соревнуются</h2><p class="muted">Ты выбыл и ждёшь итогов.</p>${ogallery()}</div>`;
+  const humans=st.players.filter(p=>p.alive&&!p.bot&&p.online).length;
+  if(c.submitted)return `${scene('dusk')}<div class="body"><span class="tag">Конкурс «${esc(c.title)}»</span><h2>Ответ принят</h2><p class="muted">Ждём остальных: ${c.count} из ${humans}. Победитель получит иммунитет на голосовании.</p>${ogallery()}</div>`;
+  const L=O.loc;
+  if(c.type==='react'){L.times=L.times||[];
+    return `${scene('dusk')}<div class="body"><span class="tag">Конкурс «${esc(c.title)}»</span><h2>Лови огонь</h2><p class="muted">Нажми, как только кнопка станет зелёной. Три попытки, считается среднее. Фальстарт — штраф.</p>
+    <button class="rbtn wait" id="orbtn" data-a="ortap">Жди зелёного…</button><p class="muted">Попытка ${L.times.length+1} из 3${L.times.length?'. Прошлые: '+L.times.map(t=>t+' мс').join(', '):''}</p></div>`;}
+  if(c.type==='stop'){L.tries=L.tries||[];const last=L.tries[L.tries.length-1];
+    return `${scene('dusk')}<div class="body"><span class="tag">Конкурс «${esc(c.title)}»</span><h2>Останови ровно на 5,00</h2><p class="muted">Нажми «Старт» и считай про себя. Цифры исчезнут через полторы секунды. Две попытки, засчитывается лучшая.</p>
+    <div class="sdisp" id="osdisp">${last===undefined?'0.00':(last/1000).toFixed(2)}</div>
+    <button class="rbtn go" id="osbtn" data-a="ostap">Старт</button><p class="muted">Попытка ${Math.min(L.tries.length+1,2)} из 2</p></div>`;}
+  L.i=L.i||0;L.ans=L.ans||[];
+  const q=c.qs[L.i];const answered=L.ans.length>L.i;const picked=L.ans[L.i];
+  const ph=q.photo!==undefined?O.photos[q.photo]:null;
+  const img=ph?`<div class="qimg" style="background-image:url('${ph}');${answered?'background-size:cover;background-position:center':`background-size:${q.zoom}%;background-position:${q.px}% ${q.py}%`}" role="img" aria-label="Фото игрока"></div>`:'';
+  return `${scene('dusk')}<div class="body"><span class="tag">Конкурс «${esc(c.title)}» · ${L.i+1} из ${c.qs.length}</span><h2>${esc(q.q)}</h2>${img}${q.big?`<div class="bigq ${q.small?'txt':''}">${esc(q.big)}</div>`:''}
+  <div class="list">${q.o.map((o,i)=>`<button class="opt ${answered?(i===q.a?'ok':i===picked?'bad':''):''}" data-a="oans" data-v="${i}" ${answered?'disabled':''}>${esc(o)}</button>`).join('')}</div>
+  ${answered?`<button class="btn" data-a="oqnext">${L.i===c.qs.length-1?'Отправить ответы':'Дальше'}</button>`:''}</div>`;
+}
+function oreactStart(){const L=O.loc;if(L.phase==='wait'||L.phase==='go')return;L.phase='wait';
+  L.tm=setTimeout(()=>{L.phase='go';L.t0=performance.now();const b=document.getElementById('orbtn');if(b){b.className='rbtn go';b.textContent='Жми!';}},1200+rnd(2200));}
+function oreactTap(){const L=O.loc;if(L.phase!=='wait'&&L.phase!=='go')return;
+  let t;if(L.phase==='go')t=Math.round(performance.now()-L.t0);else{clearTimeout(L.tm);t=900;toast('Фальстарт, штраф');}
+  L.phase='none';L.times.push(t);haptic('medium');
+  if(L.times.length>=3){osend({t:'contest',times:L.times});}else{orender();}}
+function ostopTap(){const L=O.loc;
+  if(L.run){clearInterval(L.iv);L.run=false;L.tries.push(Math.round(performance.now()-L.t0));haptic('medium');
+    if(L.tries.length>=2)osend({t:'contest',times:L.tries});else orender();return;}
+  L.run=true;L.t0=performance.now();const b=document.getElementById('osbtn');if(b)b.textContent='Стоп!';
+  L.iv=setInterval(()=>{const d=document.getElementById('osdisp');if(!d)return;const t=(performance.now()-L.t0)/1000;d.textContent=t<1.5?t.toFixed(2):'?.??';},30);}
+
+/* ---------- голосование ---------- */
+function contestSummary(){
+  const c=O.st.contest;if(!c||!c.done)return '';
+  const w=c.winner!==null&&OP(c.winner);
+  const rows=Object.entries(c.labels).map(([id,l])=>{const p=OP(+id);return p?`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">${oav(p,28)}<span style="flex:1">${esc(p.name)}</span><b>${esc(l)}</b></div>`:'';}).join('');
+  return `<div class="card"><span class="tag">Итоги конкурса «${esc(c.title)}»</span><div class="list" style="margin-top:8px">${rows}</div>
+  ${w?`<p style="margin-top:8px">${w.id===O.st.me?'Ты победил: сегодня тебя нельзя исключить.':`Победа: <b>${esc(w.name)}</b>. Этого игрока сегодня нельзя исключить.`}</p>`:''}</div>`;
+}
+function rvote(){
+  const st=O.st,v=st.vote,me=ome();
+  const humans=st.players.filter(p=>p.alive&&!p.bot&&p.online).length;
+  if(!me.alive)return `${scene('dusk')}<div class="body">${contestSummary()}<h2>Лагерь голосует</h2><p class="muted">Ты выбыл и ждёшь итогов.</p></div>`;
+  const ch=O.loc.choice!==undefined?O.loc.choice:v.choice;
+  const sent=v.choice!==null&&v.choice!==undefined;
+  return `${scene('dusk')}<div class="body">${contestSummary()}<h2>Кого исключаем?</h2><p class="muted">Большинство решает. При ничьей никого не исключают. Проголосовали: ${v.count} из ${humans}.</p>
+  <div class="list">${oalive().filter(p=>p.id!==st.me).map(p=>`<button class="pl ${ch===p.id?'sel':''} ${v.immune===p.id?'imm':''}" data-a="ovchoose" data-v="${p.id}" ${v.immune===p.id||sent?'disabled':''}>${oav(p,44)}<span class="nm">${esc(p.name)}</span>${v.immune===p.id?'<span class="sub">иммунитет</span>':''}</button>`).join('')}
+  <button class="pl ${ch===-1?'sel':''}" data-a="ovchoose" data-v="-1" ${sent?'disabled':''}><span class="nm">Никого</span></button></div>
+  ${sent?'<p class="muted">Голос принят. Ждём остальных.</p>':`<button class="btn danger" data-a="ovsend" ${ch===undefined||ch===null?'disabled':''}>Проголосовать</button>`}</div>`;
+}
+
+/* ---------- итоги ---------- */
+function rresult(){
+  const st=O.st,r=st.result||{},ex=r.executed,me=ome();
+  const cnt=Object.entries(r.count||{}).sort((a,b)=>b[1]-a[1]);const max=Math.max(1,...cnt.map(x=>x[1]));
+  const rows=cnt.map(([id,c])=>{const p=OP(+id);return p?`<div><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">${oav(p,30)}<b style="flex:1">${esc(p.name)}</b><span>${c} гол.</span></div><div class="bar"><i style="width:${c/max*100}%"></i></div></div>`:'';}).join('');
+  const exp=ex&&OP(ex.id);
+  return `${scene('dusk')}<div class="body"><h2>Итоги голосования</h2><div class="card list">${rows||'<span class="muted">Никто не получил голосов.</span>'}</div>
+  ${exp?`<div class="card" style="display:flex;gap:14px;align-items:center">${O.photos[exp.id]?`<img class="big" src="${O.photos[exp.id]}" alt="" style="filter:grayscale(1)">`:oav(exp,80)}<div><b>${esc(exp.name)}</b><br><span class="tag ${ex.role==='saboteur'?'good':'bad'}">${ROLE_N[ex.role]}</span></div></div>`:''}
+  <div class="story"><small>Рассказчик</small>${ex?(ex.id===st.me?'Лагерь исключил тебя. Дальше ты наблюдаешь.':`Лагерь исключил <b>${esc(ex.name)}</b>. ${ex.role==='saboteur'?'Диверсант найден!':'Это был невиновный.'}`):'Голоса разошлись, сегодня никого не исключили.'}</div>
+  ${me.alive?readyBtn('Следующая ночь'):''}</div>`;
+}
+function rfinal(){
+  const st=O.st,f=st.final,my=st.my||{},host=st.host===st.me;
+  const myRole=my.role;const win=myRole&&((f.winner==='saboteurs')===(myRole==='saboteur'));
+  return `${scene('dawn')}<div class="body"><h1>${f.winner==='camp'?'Лагерь победил':'Победили диверсанты'}</h1>
+  <p class="story"><small>Рассказчик</small>${f.winner==='camp'?'Все диверсанты найдены. Утром колонна выезжает на трассу.':'Диверсантов стало не меньше, чем остальных. Колонна так и не тронулась.'} Раундов: ${f.rounds}.${myRole?(win?' Твоя сторона выиграла!':' Твоя сторона проиграла.'):''}</p>
+  <h2>Рейтинг</h2><table>${f.rank.map((r,i)=>{const p=OP(r.id)||r;return `<tr><td><span style="display:inline-flex;align-items:center;gap:10px">${i+1}. ${oav(p,28)}${esc(r.name)} <span class="tag ${r.role==='saboteur'?'bad':''}">${ROLE_N[r.role]}</span></span></td><td class="n">${r.pts}</td></tr>`;}).join('')}</table>
+  ${my.ledger&&my.ledger.length?`<div class="card"><b>Твои очки: ${my.pts}</b><div class="list" style="margin-top:8px">${my.ledger.map(l=>`<div style="display:flex;justify-content:space-between;gap:10px"><span>${esc(l[1])}</span><b style="color:var(--amber)">+${l[0]}</b></div>`).join('')}</div></div>`:''}
+  ${my.badges&&my.badges.length?`<h2>Достижения</h2>${my.badges.map(b=>`<div class="badge"><div class="ic">${esc(b[0])}</div><div><b>${esc(b)}</b><div class="muted" style="font-size:14px">${esc(f.badge_text[b]||'')}</div></div></div>`).join('')}`:''}
+  ${host?`<button class="btn" data-a="ostart" data-v="1">Ещё партию этим составом</button>`:'<p class="muted">Ведущий может запустить ещё партию.</p>'}
+  ${ochatBlock(true)}
+  <button class="btn ghost" data-a="oleave">Выйти в меню</button></div>`;
+}
+function rwait(){return `${scene('night')}<div class="body"><h2>Подключаюсь к лагерю…</h2><p class="muted">Секунду, разжигаем костёр.</p></div>`;}
+
+function orender(){
+  if(MODE==='training')return;
+  const app=$('#app');let html;
+  if(MODE==='menu')html=rmenu();
+  else if(!O.st)html=O.err?rmenu():rwait();
+  else{const st=O.st;const me=ome();
+    if(me&&me.spect&&st.phase!=='lobby'&&st.phase!=='final')html=`${scene('dusk')}<div class="body"><h2>Партия уже идёт</h2><p class="muted">Ты зритель и сыграешь в следующей партии. Раунд ${st.round}.</p>${ogallery()}${ochatBlock(false)}</div>`;
+    else html=({lobby:rlobby,night:rnight,morning:rmorning,day:rday,contest:rcontest,vote:rvote,result:rresult,final:rfinal}[st.phase]||rwait)();}
+  const focusMsg=document.activeElement&&document.activeElement.id==='msg';const draft=$('#msg')?$('#msg').value:'';
+  app.innerHTML=otop()+html;
+  const inp=$('#msg');if(inp){inp.value=draft;if(focusMsg)inp.focus();}
+  if(O.st&&$('#chat'))O.chat.forEach(ochatAdd);
+  if(O.st&&O.st.phase==='night'&&O.st.my&&O.st.my.role==='tourist'&&O.st.my.alive)ostartMemory();
+  if(O.st&&O.st.phase==='contest'&&O.st.contest&&O.st.contest.type==='react'&&!O.st.contest.submitted&&ome().alive)oreactStart();
+}
+
+/* ---------- действия ---------- */
+Object.assign(ACT,{
+  ocreate:()=>{MODE='online';O.err='';O.code='';if(O.ws&&O.ws.readyState===1)osend({t:'create'});else{O.want='';O.pendingCreate=true;oconnect();}orender();},
+  ojoin:()=>{const c=($('#ocode').value||'').trim().toUpperCase();if(c.length<4){toast('Введи код лагеря из 5 символов');return;}MODE='online';O.err='';if(O.ws&&O.ws.readyState===1)osend({t:'join',room:c});else{O.want=c;oconnect();}orender();},
+  otrain:()=>{MODE='training';newGame(true);render();},
+  oleave:()=>{osend({t:'leave'});O.st=null;O.code='';MODE='menu';orender();},
+  oinvite:()=>{const link=O.link;if(!link){toast('Код лагеря: '+O.code);return;}
+    const url='https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent('Заходи в мой лагерь «Дикой поездки»: мафия у костра в степи! Код '+O.code);
+    if(TG.w&&TG.w.openTelegramLink)TG.w.openTelegramLink(url);else{try{navigator.clipboard.writeText(link);toast('Ссылка скопирована');}catch(e){toast(link);}}},
+  ostart:v=>osend({t:'start',bots:v==='1'}),
+  onight:v=>{osend({t:'night',target:+v});haptic('light');},
+  opad:v=>opad(+v),
+  oready:()=>{osend({t:'ready'});haptic('light');},
+  osend:()=>{const i=$('#msg');const t=i.value.trim();if(!t)return;osend({t:'chat',text:t});i.value='';haptic('light');},
+  oans:v=>{const L=O.loc;if(L.ans.length>L.i)return;L.ans.push(+v);haptic(+v===O.st.contest.qs[L.i].a?'success':'error');orender();},
+  oqnext:()=>{const L=O.loc,c=O.st.contest;if(L.i<c.qs.length-1){L.i++;orender();}else osend({t:'contest',answers:L.ans});},
+  ortap:()=>oreactTap(),
+  ostap:()=>ostopTap(),
+  ovchoose:v=>{O.loc.choice=+v;orender();},
+  ovsend:()=>{if(O.loc.choice===undefined)return;osend({t:'vote',target:O.loc.choice});haptic('medium');}
+});
+/* отправка сообщения клавишей Enter */
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='msg'){e.preventDefault();if(MODE==='online')ACT.osend();else ACT.send();}
+  if(e.key==='Enter'&&e.target&&e.target.id==='ocode'){e.preventDefault();ACT.ojoin();}});
+/* фото: своё в лобби и фото в чат */
+document.addEventListener('change',e=>{const f=e.target;if(MODE!=='online'||!f.files||!f.files[0])return;
+  if(f.dataset.ophoto)shrink(f.files[0],320,true,d=>{O.photos[O.st.me]=d;osend({t:'photo',data:d});orender();});
+  if(f.dataset.ochat)shrink(f.files[0],560,false,d=>{if(d.length>390000){toast('Фото слишком большое');return;}osend({t:'chat',text:'',img:d});});
+});
+
+function bootOnline(){
+  const sp=startParam();
+  if(sp&&canOnline()){MODE='online';O.want=sp.toUpperCase();oconnect();orender();return;}
+  if(canOnline()){oconnect();}   // вернёт в лагерь, если игрок уже в нём
+  MODE='menu';orender();
+}
+
+if(!TG_PENDING)bootOnline();
 </script>
 </body>
 </html>
