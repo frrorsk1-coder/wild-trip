@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Дикая поездка: Мафия</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Golos+Text:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Палитра: ночная степь у костра. Тёмный фон, песок для текста, янтарь для действий, ржавчина для опасности.
+   Композиция: одна колонка как экран телефона, сверху живая иллюстрация сцены, под ней рассказчик и действие. */
+:root{
+  --ink:#14100D; --ink2:#1F1913; --ink3:#2C241B; --line:#3E3326;
+  --sand:#EBDDBE; --dust:#A99A7E; --amber:#F29A2E; --rust:#A93822; --rustText:#EE7058; --olive:#9DB05F;
+  --display:'Russo One','Arial Black',sans-serif; --body:'Golos Text',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:#0C0907;color:var(--sand);font-family:var(--body);font-size:16px;line-height:1.45}
+button{font-family:inherit;color:inherit}
+#app{max-width:430px;min-height:100%;margin:0 auto;background:var(--ink);display:flex;flex-direction:column;position:relative}
+.top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--ink);z-index:5}
+.brand{font-family:var(--display);font-size:15px;letter-spacing:.06em;color:var(--amber)}
+.pts{font-weight:700;font-size:15px}
+.pts span{color:var(--amber)}
+.steps{display:flex;gap:4px;padding:10px 16px 0}
+.steps i{flex:1;height:4px;border-radius:2px;background:var(--ink3)}
+.steps i.on{background:var(--amber)}
+.steps i.now{background:var(--sand)}
+.stepname{padding:6px 16px 0;font-size:13px;color:var(--dust);letter-spacing:.08em;text-transform:uppercase}
+.scene{display:block;width:100%;height:190px;margin-top:10px}
+.body{padding:16px;display:flex;flex-direction:column;gap:14px;flex:1}
+h1{font-family:var(--display);font-weight:400;font-size:34px;line-height:1.05;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:400;font-size:22px;line-height:1.15;margin:0;text-wrap:balance}
+p{margin:0}
+.muted{color:var(--dust)}
+.story{background:var(--ink2);border-left:3px solid var(--amber);padding:12px 14px;border-radius:0 12px 12px 0;font-size:16px}
+.story small{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dust);margin-bottom:4px}
+.card{background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:14px}
+.btn{min-height:50px;border:0;border-radius:12px;background:var(--amber);color:#1A1208;font-size:17px;font-weight:700;padding:0 18px;cursor:pointer}
+.btn:focus-visible,.opt:focus-visible,.pl:focus-visible,.pad:focus-visible,.chip:focus-visible,input:focus-visible{outline:3px solid var(--sand);outline-offset:2px}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--sand)}
+.btn.danger{background:var(--rust);color:var(--sand)}
+.btn[disabled]{opacity:.4;cursor:default}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.role{min-height:96px;text-align:left;background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.role b{font-family:var(--display);font-weight:400;font-size:17px}
+.role span{font-size:13px;color:var(--dust);line-height:1.3}
+.role:hover{border-color:var(--amber)}
+.pl{display:flex;align-items:center;gap:12px;min-height:56px;background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:6px 14px;text-align:left;cursor:pointer;width:100%}
+.pl.sel{border:2px solid var(--amber);background:#2A2012}
+.pl.dead{opacity:.45;cursor:default}
+.pl.imm{border-color:var(--olive)}
+.av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#14100D;flex:none}
+.pl .nm{font-weight:700}
+.pl .sub{margin-left:auto;font-size:13px;color:var(--dust);text-align:right}
+.list{display:flex;flex-direction:column;gap:8px}
+.pads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pad{height:84px;border-radius:16px;border:0;opacity:.35;cursor:pointer;transition:opacity .15s,transform .15s}
+.pad.lit{opacity:1;transform:scale(1.03)}
+.chat{display:flex;flex-direction:column;gap:8px;min-height:190px;max-height:300px;overflow-y:auto;padding:2px}
+.msg{max-width:86%;background:var(--ink3);border-radius:14px 14px 14px 4px;padding:8px 12px;font-size:15px}
+.msg b{display:block;font-size:12px;color:var(--amber);letter-spacing:.04em}
+.msg.me{align-self:flex-end;background:#3B2A12;border-radius:14px 14px 4px 14px}
+.row{display:flex;gap:8px}
+input{flex:1;min-width:0;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--ink2);color:var(--sand);font-size:16px;padding:0 12px;font-family:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:36px;border-radius:18px;border:1px solid var(--line);background:transparent;padding:0 12px;font-size:14px;cursor:pointer}
+.task{border:1px dashed var(--amber);border-radius:14px;padding:12px;font-size:15px;background:#1B140A}
+.task.done{border-style:solid;border-color:var(--olive);background:#161B0C}
+.opt{min-height:54px;text-align:left;background:var(--ink2);border:1px solid var(--line);border-radius:12px;padding:0 14px;font-size:16px;cursor:pointer;width:100%}
+.opt.ok{border-color:var(--olive);background:#1B2210}
+.opt.bad{border-color:var(--rustText);background:#2A1410}
+.bar{height:8px;border-radius:4px;background:var(--ink3);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--amber)}
+.badge{display:flex;gap:12px;align-items:center}
+.badge .ic{width:44px;height:44px;border-radius:50%;border:2px solid var(--amber);display:flex;align-items:center;justify-content:center;font-family:var(--display);color:var(--amber);flex:none}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--amber);color:#1A1208;font-weight:700;padding:12px 18px;border-radius:14px;z-index:20;max-width:90%;text-align:center}
+.tag{display:inline-block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:var(--ink3);color:var(--dust)}
+.tag.bad{background:var(--rust);color:var(--sand)}
+.tag.good{background:#27331A;color:var(--olive)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+td{padding:8px 4px;border-bottom:1px solid var(--line);font-size:15px}
+td.n{text-align:right;font-weight:700;color:var(--amber)}
+.flame{transform-origin:195px 150px;animation:flick .5s ease-in-out infinite alternate}
+.star{animation:tw 3s ease-in-out infinite}
+@keyframes flick{from{transform:scale(1,1)}to{transform:scale(.92,1.1)}}
+@keyframes tw{0%,100%{opacity:.3}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.av img,img.av{object-fit:cover}
+.gal{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:4px 0}
+.pol{width:78px;background:var(--sand);color:#14100D;padding:5px 5px 6px;border-radius:3px;box-shadow:0 3px 8px rgba(0,0,0,.5);text-align:center;font-size:12px;font-weight:700;transform:rotate(-3deg)}
+.pol:nth-child(even){transform:rotate(2.5deg)}
+.pol img,.pol .ph{display:block;width:68px;height:68px;object-fit:cover;margin:0 auto 4px;background:#888;color:#14100D;font-size:26px;font-weight:700;line-height:68px}
+.pol.out{filter:grayscale(1);opacity:.5}
+.pol.out span{text-decoration:line-through}
+.qimg{height:200px;border-radius:14px;background-color:var(--ink3);background-repeat:no-repeat;border:1px solid var(--line)}
+.big{width:120px;height:120px;border-radius:14px;object-fit:cover;display:block}
+.msg img{display:block;max-width:100%;border-radius:10px;margin-top:6px}
+.rbtn{min-height:150px;border:0;border-radius:18px;font-family:var(--display);font-size:26px;cursor:pointer;width:100%}
+.rbtn.wait{background:var(--rust);color:var(--sand)}
+.rbtn.go{background:var(--olive);color:#14100D}
+.btn.small{min-height:40px;font-size:14px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.photorow{display:flex;align-items:center;gap:12px;min-height:56px}
+.photorow .nm{font-weight:700;flex:1}
+label.btn{display:flex;align-items:center;justify-content:center}
+.bigq{font-size:44px;text-align:center;padding:14px 8px;background:var(--ink2);border:1px solid var(--line);border-radius:14px;letter-spacing:.06em;font-family:var(--display);word-break:break-word}
+.bigq.txt{font-family:var(--body);font-size:20px;letter-spacing:0;font-weight:500;line-height:1.35}
+.sdisp{font-family:var(--display);font-size:64px;text-align:center;color:var(--amber);font-variant-numeric:tabular-nums;padding:8px 0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const rnd=n=>Math.floor(Math.random()*n);
+const pick=a=>a[rnd(a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
+
+const ROLES={
+  saboteur:{n:'Диверсант',bad:true,desc:'Ночью выводишь из строя чужой квадроцикл: игрок выбывает. Днём притворяйся туристом.'},
+  mechanic:{n:'Механик',bad:false,desc:'Ночью чинишь машину одного игрока. Если диверсант выбрал его, игрок остаётся в игре.'},
+  tracker:{n:'Следопыт',bad:false,desc:'Ночью идёшь по следам и узнаёшь, диверсант ли выбранный игрок.'},
+  tourist:{n:'Турист',bad:false,desc:'Ночью стережёшь костёр. Пройдёшь игру на память, услышишь шаги и получишь подсказку.'}
+};
+const NAMES=['Ты','Анна','Борис','Вика','Глеб','Дима','Ева'];
+const COLORS=['#F29A2E','#9DB05F','#E8664C','#7FB3C9','#C79AD6','#E0C46C','#B8A98A'];
+const STEPS=['Ночь','Утро','Обсуждение','Конкурс','Голосование','Итоги'];
+const STEP_OF={night:0,morning:1,day:2,contest:3,vote:4,result:5,spectate:5,final:5};
+
+/* ---------- банки (верный ответ записан первым, порядок перемешивается) ---------- */
+const QBANK=[
+ /* техника и езда */
+ ['Что обязательно надевают перед выездом на квадроцикле?','Шлем','Шарф','Кепку','Очки для чтения'],
+ ['Как называется езда на мотоциклах по бездорожью на выносливость?','Эндуро','Дрэг','Мотобол','Шоссейные гонки'],
+ ['Чем заправляют большинство квадроциклов?','Бензином','Водой','Газировкой','Молоком'],
+ ['Сколько колёс у обычного квадроцикла?','Четыре','Два','Три','Шесть'],
+ ['Что проверяют перед выездом в первую очередь?','Тормоза и уровень топлива','Цвет шлема','Громкость музыки','Наличие сувениров'],
+ ['Как называется гонка на скорость по прямой на короткую дистанцию?','Дрэг-рейсинг','Эндуро','Ралли-рейд','Триал'],
+ ['Что означает «4×4» у квадроцикла?','Привод на все четыре колеса','Четыре скорости','Четыре места','Четыре фары'],
+ ['Зачем на квадроцикле лебёдка?','Вытащить технику, если застрял','Поднимать флаг','Заводить мотор','Подкачивать колёса'],
+ ['Куда смещают вес тела на крутом подъёме?','Вперёд','Назад','Встают на сиденье','Никуда'],
+ ['Что поджигает топливо в бензиновом моторе?','Свеча зажигания','Радиатор','Глушитель','Воздушный фильтр'],
+ ['Что охлаждает мотор с жидкостным охлаждением?','Радиатор','Глушитель','Аккумулятор','Спидометр'],
+ ['Для чего нужен глушитель?','Снижать шум выхлопа','Охлаждать масло','Тормозить','Освещать дорогу'],
+ ['Что показывает тахометр?','Обороты двигателя','Скорость','Уровень топлива','Температуру воздуха'],
+ ['Что лучше всего защищает глаза в пыльной степи?','Очки или визор шлема','Кепка','Бандана на шее','Солнцезащитный крем'],
+ ['Что такое «черепаха» в мотоэкипировке?','Защита спины и груди','Шлем без визора','Мотоботы','Сумка на бак'],
+ ['Что такое брод?','Мелкое место, где переезжают реку','Вид шины','Название тормоза','Трюк на заднем колесе'],
+ ['Как называется езда на заднем колесе?','Вилли','Стоппи','Дрифт','Слалом'],
+ ['Как называется трюк на переднем колесе мотоцикла?','Стоппи','Вилли','Бёрнаут','Джамп'],
+ ['Где проезжают препятствия, стараясь не касаться земли ногой?','В триале','В дрэге','В шоссейных гонках','В картинге'],
+ ['Как называется многодневная гонка по бездорожью вроде «Дакара»?','Ралли-рейд','Картинг','Дрэг-рейсинг','Мотобол'],
+ ['Что сделать перед бродом?','Оценить глубину и дно','Разогнаться посильнее','Выключить фары','Снять шлем'],
+ ['Что такое протектор?','Рисунок на поверхности шины','Защита для рук','Вид топлива','Часть руля'],
+ ['Какая часть шлема-интеграла защищает подбородок?','Подбородочная дуга','Визор','Козырёк','Вентиляция'],
+ ['Какое топливо у дизельного двигателя?','Дизельное, «солярка»','Бензин','Спирт','Керосин для ламп'],
+ ['Что означает красный сигнал светофора?','Стоять','Можно ехать','Готовиться к повороту','Ехать быстрее'],
+ /* степь, природа, ориентирование */
+ ['Какая звезда почти всегда указывает на север?','Полярная','Сириус','Венера','Бетельгейзе'],
+ ['Какой прибор показывает направление на север?','Компас','Барометр','Спидометр','Термометр'],
+ ['Какое созвездие помогает найти Полярную звезду?','Большая Медведица','Орион','Скорпион','Лира'],
+ ['Где Солнце в полдень, если смотреть из России?','На юге','На севере','На востоке','На западе'],
+ ['С какой стороны горизонта восходит Солнце?','С востока','С запада','С севера','С юга'],
+ ['Что нужно костру, чтобы гореть?','Кислород','Азот','Углекислый газ','Гелий'],
+ ['Как правильно потушить костёр перед уходом?','Залить водой и засыпать землёй','Оставить догорать','Накрыть пакетом','Подуть на угли'],
+ ['Какой степной зверёк встаёт столбиком у норы?','Суслик','Ёж','Крот','Бобр'],
+ ['Какой злак с серебристыми метёлками считают символом степи?','Ковыль','Рожь','Рис','Бамбук'],
+ ['Что такое перекати-поле?','Сухое растение, которое катит ветер','Степная ящерица','Песчаная буря','Вид кактуса'],
+ ['Когда в степи обычно холоднее всего?','Перед рассветом','В полдень','Сразу после обеда','В два часа дня'],
+ ['Что делать, если заблудился?','Остановиться и сориентироваться','Бежать куда глаза глядят','Сжечь весь бензин','Разойтись поодиночке'],
+ ['Как называется спорт, где по карте ищут контрольные пункты?','Спортивное ориентирование','Скалолазание','Биатлон','Рафтинг'],
+ ['Какой прибор измеряет атмосферное давление?','Барометр','Термометр','Компас','Спидометр'],
+ /* наш край */
+ ['Какая река протекает через Орск?','Урал','Волга','Обь','Дон'],
+ ['Какая река впадает в Урал в Орске?','Орь','Ока','Кама','Нева'],
+ ['Какой промысел прославил Оренбург?','Пуховые платки','Хохлома','Гжель','Матрёшки'],
+ ['Какой город — центр Оренбургской области?','Оренбург','Орск','Новотроицк','Бузулук'],
+ ['Кто написал «Капитанскую дочку», где действие идёт в Оренбургском крае?','Пушкин','Толстой','Гоголь','Лермонтов'],
+ ['Между какими частями света течёт река Урал?','Европой и Азией','Европой и Африкой','Азией и Америкой','Африкой и Азией'],
+ /* география и наука */
+ ['Какая гора самая высокая в России?','Эльбрус','Белуха','Казбек','Народная'],
+ ['Какое озеро самое глубокое в мире?','Байкал','Ладожское','Онежское','Телецкое'],
+ ['Какой океан самый большой?','Тихий','Атлантический','Индийский','Северный Ледовитый'],
+ ['Какой материк самый маленький?','Австралия','Африка','Южная Америка','Евразия'],
+ ['Какой материк самый большой?','Евразия','Африка','Антарктида','Северная Америка'],
+ ['Какая река самая длинная в Европе?','Волга','Дунай','Днепр','Рейн'],
+ ['Какая планета ближе всех к Солнцу?','Меркурий','Венера','Марс','Земля'],
+ ['Какую планету называют Красной?','Марс','Юпитер','Венера','Сатурн'],
+ ['Какая планета самая большая?','Юпитер','Сатурн','Нептун','Земля'],
+ ['Какой металл притягивает магнит?','Железо','Медь','Алюминий','Золото'],
+ ['При какой температуре замерзает вода?','0 °C','10 °C','−10 °C','4 °C'],
+ ['При какой температуре кипит вода на уровне моря?','100 °C','90 °C','120 °C','80 °C'],
+ ['Какой газ мы выдыхаем больше, чем вдыхаем?','Углекислый газ','Кислород','Гелий','Водород'],
+ ['Какое животное самое быстрое на суше?','Гепард','Лев','Лошадь','Волк'],
+ ['Сколько ног у паука?','Восемь','Шесть','Десять','Четыре'],
+ ['Кто из них не насекомое?','Паук','Муравей','Пчела','Кузнечик'],
+ ['Какой цвет получится из синего и жёлтого?','Зелёный','Фиолетовый','Оранжевый','Коричневый'],
+ /* числа и жизнь */
+ ['Сколько дней в високосном году?','366','365','364','367'],
+ ['Сколько минут в сутках?','1440','1240','1600','1000'],
+ ['Сколько секунд в часе?','3600','360','6000','1200'],
+ ['Сколько часов в неделе?','168','148','172','120'],
+ ['Сколько граммов в килограмме?','1000','100','10','10000'],
+ ['Какой единый номер экстренных служб с мобильного в России?','112','911','999','05'],
+ ['Сколько будет 15% от 200?','30','15','20','45']
+];
+/* «Правда или выдумка»: утверждение и верный ответ */
+const TRUTH=[
+ ['Полярная звезда — самая яркая звезда ночного неба.',false],
+ ['Байкал — самое глубокое озеро на планете.',true],
+ ['Верблюд хранит воду в горбах.',false],
+ ['Молния никогда не бьёт в одно место дважды.',false],
+ ['Летучие мыши слепые.',false],
+ ['Кожа белого медведя под мехом чёрная.',true],
+ ['У осьминога три сердца.',true],
+ ['Страус от страха прячет голову в песок.',false],
+ ['В воде звук идёт быстрее, чем в воздухе.',true],
+ ['Река Урал течёт через Орск.',true],
+ ['Орск стоит на берегу Волги.',false],
+ ['Человек использует только 10% мозга.',false],
+ ['С точки зрения ботаники помидор — ягода.',true],
+ ['Солнце — звезда.',true],
+ ['Пингвины живут у Северного полюса.',false],
+ ['Шлем нужен только на большой скорости.',false],
+ ['Луна светит собственным светом.',false],
+ ['Вода расширяется, когда замерзает.',true],
+ ['У жирафа в шее столько же позвонков, сколько у человека.',true],
+ ['Звёзды мигают из-за атмосферы Земли.',true],
+ ['Мёд может храниться очень долго и не портиться.',true],
+ ['Гепард может бежать с максимальной скоростью несколько часов.',false],
+ ['Квадроцикл с приводом 4×4 крутит все четыре колеса.',true],
+ ['В полдень в России Солнце стоит на севере.',false]
+];
+/* «Угадай по эмодзи»: поговорки */
+const EMOJI=[
+ ['⏰💰','Время — деньги'],
+ ['🎣🐟💪','Без труда не вытащишь и рыбку из пруда'],
+ ['🐺🌲😨','Волков бояться — в лес не ходить'],
+ ['🌅🧠','Утро вечера мудренее'],
+ ['🐣🍂🔢','Цыплят по осени считают'],
+ ['🗣️🐦','Слово не воробей, вылетит — не поймаешь'],
+ ['😨👀','У страха глаза велики'],
+ ['🐴🎁🦷','Дарёному коню в зубы не смотрят'],
+ ['7️⃣📏1️⃣✂️','Семь раз отмерь — один отрежь'],
+ ['☀️🛷❄️🛒','Готовь сани летом, а телегу зимой'],
+ ['🏃🐇🐇','За двумя зайцами погонишься — ни одного не поймаешь'],
+ ['💧🪨','Вода камень точит'],
+ ['💯👫','Не имей сто рублей, а имей сто друзей'],
+ ['🍎🌳⬇️','Яблоко от яблони недалеко падает'],
+ ['🐢🚗','Тише едешь — дальше будешь'],
+ ['🔥💨','Нет дыма без огня']
+];
+/* слова для тайных заданий: слово и основа, по которой засчитывается */
+const WORDS=[['бензин','бензин'],['свеча','свеч'],['компас','компас'],['шлем','шлем'],['костёр','кост'],['палатка','палатк'],['рация','раци'],['туман','туман'],['следы','след'],['фара','фар'],['карта','карт'],['термос','термос'],['колесо','колес'],['грязь','гряз'],['степь','степ'],['лебёдка','лебедк'],['фонарь','фонар'],['канистра','канистр'],['ковыль','ковыл'],['суслик','суслик'],['звёзды','звезд'],['чайник','чайник'],['перчатки','перчат'],['глушитель','глушител'],['руль','рул'],['ветер','вет'],['брод','брод'],['дорога','дорог'],['мотор','мотор'],['спальник','спальник']];
+const NIGHT_STORY=[
+ 'Костёр догорает, в темноте слышны шаги.',
+ 'Поднялся ветер, палатки хлопают, одна фара мигает вдалеке.',
+ 'Небо затянуло, звёзд не видно. Кто-то ходит у стоянки.',
+ 'В степи завыл ветер. У техники хрустит гравий.',
+ 'Тишина такая, что слышно, как остывает двигатель.',
+ 'Где-то далеко лает собака. Кто-то расстегнул палатку и долго не возвращался.',
+ 'Пошёл мелкий дождь. Следы у стоянки к утру размоет.',
+ 'Луна вышла из-за облаков, по степи легли длинные тени квадроциклов.',
+ 'Кто-то уронил канистру. Звук прокатился по всему лагерю.',
+ 'Фонарик мигнул три раза у дальней палатки и погас.',
+ 'Ковыль шуршит так, будто кто-то крадётся. Или правда крадётся.',
+ 'Ночью ударил заморозок, на сиденьях иней. Чьи-то следы ведут к технике.'
+];
+const FEMALE=['Анна','Вика','Ева'];
+const FEM=p=>FEMALE.includes(p.name);
+/* {м|ж} выбирается по роду говорящего, {X} — имя другого игрока в именительном падеже */
+const fmt=(t,who,x)=>t.replace(/\{([^{}|]*)\|([^{}|]*)\}/g,(m,a,b)=>who&&FEM(who)?b:a).replace(/\{X\}/g,x?x.name:'');
+const BOT_CALM=['Я всю ночь {грел|грела} чай и ничего не {слышал|слышала}.','Давайте не спешить, информации мало.','{X}, что скажешь про эту ночь?','Я {спал как убитый|спала как убитая}. Простите за выражение.','Я за то, чтобы выслушать каждого.','Ночью я {слышал|слышала} мотор. Кто-то заводил квадроцикл?','Предлагаю голосовать головой, а не эмоциями.','{X} сегодня подозрительно тихо себя ведёт.'];
+const BOT_ACCUSE=['Мне не нравится, как молчит {X}.','{X}, что ты делаешь у стоянки по ночам?','Слишком тихо было. Интересно, что скрывает {X}.','Ботинки у тебя, {X}, слишком чистые для такой степи.','Вчера я {видел|видела}, как {X} возится с чужим квадриком.','Почему {X} так уверенно всех обвиняет?','{X}, почему от тебя пахнет бензином?','{X} отвечает слишком гладко, как по бумажке.'];
+const BOT_DEFEND=['Я? Да я всю ночь спальник {штопал|штопала}!','Не туда смотришь. Я бы {присмотрелся|присмотрелась}, как ведёт себя {X}.','Меня можно проверить, я {сидел|сидела} у костра на виду.','Обвинять легко. А сам-то ты чем ночью занимался?','Честное слово, я даже ключ от своего квадрика найти не могу.','Хорошо, голосуйте против меня, а утром потеряете ещё одного.'];
+const BOT_ANSWER=['Хороший вопрос. Я думаю, это {X}.','Не знаю, но ночью у палатки, где спит {X}, горел фонарик.','Я бы {спросил|спросила} то же самое у костра. {X}, ответишь?','Пока не {уверен|уверена}. Послушаю, что скажут остальные.','Честно? Подозреваю, что это {X}.'];
+/* ---------- память между партиями (на этом устройстве) ---------- */
+const STORE={get(k,d){try{const v=localStorage.getItem('wt_'+k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem('wt_'+k,JSON.stringify(v));}catch(e){}}};
+const USED=STORE.get('used',{});
+/* ---------- Telegram Mini App: подключается, только если игра открыта внутри Telegram ---------- */
+const TG={w:null,user:null};
+function haptic(kind){
+  const h=TG.w&&TG.w.HapticFeedback;if(!h)return;
+  try{if(kind==='success'||kind==='error'||kind==='warning')h.notificationOccurred(kind);else h.impactOccurred(kind||'light');}catch(e){}
+}
+function initTG(){
+  const w=window.Telegram&&window.Telegram.WebApp;
+  if(!w||!w.platform||w.platform==='unknown')return;
+  TG.w=w;
+  try{w.ready();w.expand();}catch(e){}
+  try{w.setHeaderColor('#14100D');w.setBackgroundColor('#0C0907');}catch(e){}
+  try{if(w.disableVerticalSwipes)w.disableVerticalSwipes();}catch(e){}
+  const u=w.initDataUnsafe&&w.initDataUnsafe.user;
+  if(u){TG.user=u;if(u.photo_url&&!S.photos[0])S.photos[0]=u.photo_url;}
+  render();
+}
+(function loadTG(){
+  const inTG=/tgWebApp/.test(location.hash+location.search)||window.TelegramWebviewProxy||(window.parent!==window&&/tgWebApp/.test(document.referrer));
+  if(!inTG)return;
+  const s=document.createElement('script');s.src='https://telegram.org/js/telegram-web-app.js';s.onload=initTG;document.head.appendChild(s);
+})();
+
+let S, timers=[];
+const clearTimers=()=>{timers.forEach(t=>{clearTimeout(t);clearInterval(t);});timers=[];};
+const P=id=>S.players.find(p=>p.id===id);
+const alive=()=>S.players.filter(p=>p.alive);
+const bad=p=>ROLES[p.role].bad;
+const me=()=>P(0);
+function winner(){const b=alive().filter(bad).length,g=alive().length-b;if(b===0)return 'camp';if(b>=g)return 'saboteurs';return null;}
+
+/* ---------- состояние ---------- */
+function newGame(keep){
+  const photos=keep&&S?S.photos:{};
+  S={screen:'intro',role:null,players:[],ledger:[],badges:[],photos,round:1,usedQ:[],usedTasks:[],lastContest:null,lastEvent:null,botPts:{}};
+  resetRound();
+}
+function resetRound(){Object.assign(S,{night:{},event:null,hint:null,chat:[],chatStarted:false,task:null,taskProg:0,taskDone:false,contest:null,vote:{choice:null},tally:null,executed:null,immune:null,mem:null,victim:null,saved:false,spec:null});}
+function setup(role){
+  const pool=['saboteur','saboteur','mechanic','tracker','tourist','tourist','tourist'];
+  pool.splice(pool.indexOf(role),1);
+  const rest=shuffle(pool);
+  S.role=role;
+  S.players=NAMES.map((n,i)=>({id:i,name:n,role:i===0?role:rest[i-1],alive:true}));
+  S.players.forEach(p=>S.botPts[p.id]=0);
+  beginRound();go('night');
+}
+function beginRound(){S.task=makeTask();}
+function nextRound(){
+  S.round++;resetRound();beginRound();
+  if(!me().alive){runSpectate(true);go('spectate');}else go('night');
+}
+function addPts(n,label,badge){haptic('success');S.ledger.push({n,label:'Раунд '+S.round+': '+label});if(badge&&!S.badges.includes(badge))S.badges.push(badge);toast('+'+n+' очк. '+label);}
+function total(){return S.ledger.reduce((a,b)=>a+b.n,0);}
+function toast(t){const el=document.createElement('div');el.className='toast';el.textContent=t;document.body.appendChild(el);setTimeout(()=>el.remove(),2200);}
+function go(screen){clearTimers();S.screen=screen;render();window.scrollTo(0,0);if(TG.w){try{screen==='final'||screen==='intro'?TG.w.disableClosingConfirmation():TG.w.enableClosingConfirmation();}catch(e){}}}
+
+/* ---------- задания: каждый раунд новое ---------- */
+const norm=s=>String(s).toLowerCase().replace(/ё/g,'е');
+function makeTask(){
+  const others=alive().filter(p=>p.id!==0);
+  const kinds=['word','word','word','mention','question','short','photo','emoji','number','long','ask','exclaim','agree'];
+  for(let t=0;t<20;t++){
+    const k=pick(kinds);let task=null;
+    if(k==='word'){const [w,st]=pick(WORDS);task={key:'w'+w,kind:'word',need:1,text:`Вставь в реплику слово «${w}» так, чтобы никто не заподозрил.`,test:m=>norm(m).includes(st)};}
+    if(k==='mention'&&others.length>=3)task={key:'mention',kind:'mention',need:1,text:'Назови по имени троих игроков в одной реплике.',test:m=>others.filter(p=>norm(m).includes(norm(p.name).slice(0,3))).length>=3};
+    if(k==='question')task={key:'question',kind:'question',need:2,text:'Задай в чате два вопроса: две реплики со знаком «?».',test:m=>m.includes('?')};
+    if(k==='short')task={key:'short',kind:'short',need:1,text:'Ответь всего одним словом: реплика из одного слова, от трёх букв.',test:m=>/^\S{3,}$/.test(m.trim())};
+    if(k==='photo')task={key:'photo',kind:'photo',need:1,text:'Фотозадание: прикрепи в чат снимок, который лагерь сочтёт самым смешным.',test:()=>false};
+    if(k==='emoji')task={key:'emoji',kind:'emoji',need:2,text:'Две реплики подряд с эмодзи. Пусть думают, что ты просто весёлый.',test:m=>/\p{Extended_Pictographic}/u.test(m)};
+    if(k==='number')task={key:'number',kind:'number',need:1,text:'Упомяни в реплике любое число, например время или километры.',test:m=>/\d/.test(m)};
+    if(k==='long')task={key:'long',kind:'long',need:1,text:'Произнеси речь: одна реплика минимум из 12 слов.',test:m=>m.trim().split(/\s+/).length>=12};
+    if(k==='ask'&&others.length){const x=pick(others);task={key:'ask'+x.id,kind:'ask',need:1,text:`Задай прямой вопрос игроку ${esc(x.name)}: его имя и знак «?» в одной реплике.`,test:m=>norm(m).includes(norm(x.name).slice(0,3))&&m.includes('?')};}
+    if(k==='exclaim')task={key:'exclaim',kind:'exclaim',need:2,text:'Покажи эмоции: две реплики с восклицательным знаком.',test:m=>m.includes('!')};
+    if(k==='agree')task={key:'agree',kind:'agree',need:1,text:'Согласись с кем-нибудь: напиши «согласен» или «согласна».',test:m=>/соглас/.test(norm(m))};
+    if(task&&!S.usedTasks.includes(task.key)){S.usedTasks.push(task.key);return task;}
+  }
+  S.usedTasks=[];return {key:'wкарта',kind:'word',need:1,text:'Вставь в реплику слово «карта».',test:m=>norm(m).includes('карт')};
+}
+function taskHit(m){
+  if(S.taskDone||!S.task||!me().alive)return;
+  if(!S.task.test(m))return;
+  S.taskProg++;
+  if(S.taskProg>=S.task.need)completeTask();
+  else toast('Задание: '+S.taskProg+' из '+S.task.need);
+}
+function completeTask(){
+  S.taskDone=true;addPts(2,'Тайное задание',S.task.kind==='photo'?'Фотограф':'Хамелеон');
+  const k=$('#task');if(k){k.classList.add('done');k.innerHTML='<b>Задание выполнено</b>';}
+}
+
+/* ---------- фото игроков ---------- */
+function shrink(file,max,square,cb){
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{
+    try{
+      let sw=img.width,sh=img.height,sx=0,sy=0,w,h;
+      if(square){const m=Math.min(sw,sh);sx=(sw-m)/2;sy=(sh-m)/2;sw=sh=m;w=h=max;}
+      else{const k=Math.min(1,max/Math.max(sw,sh));w=Math.round(sw*k);h=Math.round(sh*k);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',.82));
+    }catch(e){cb(url);}
+  };
+  img.onerror=()=>toast('Не удалось открыть фото');
+  img.src=url;
+}
+document.addEventListener('change',e=>{
+  const f=e.target;if(!f.matches||!f.matches('input[type=file]')||!f.files[0])return;
+  const file=f.files[0];
+  if(f.dataset.pid!==undefined){shrink(file,320,true,d=>{S.photos[+f.dataset.pid]=d;render();});}
+  else if(f.dataset.task){shrink(file,480,false,d=>{S.chat.push({who:'Ты',text:'',img:d,mine:true});addMsg('Ты','',true,d);if(S.task&&S.task.kind==='photo')taskHit('photo');});}
+});
+function avHtml(p,sz){sz=sz||38;const ph=S.photos[p.id];
+  if(ph)return `<img class="av" alt="" src="${ph}" style="width:${sz}px;height:${sz}px">`;
+  return `<div class="av" style="width:${sz}px;height:${sz}px;background:${COLORS[p.id%COLORS.length]}">${esc(p.name[0])}</div>`;}
+function pBox(p){const ph=S.photos[p.id];return ph?`<img src="${ph}" alt="${esc(p.name)}">`:`<div class="ph" style="background:${COLORS[p.id%COLORS.length]}">${esc(p.name[0])}</div>`;}
+function gallery(){return `<div class="gal" aria-label="Участники лагеря">${S.players.map(p=>`<div class="pol ${p.alive?'':'out'}">${pBox(p)}<span>${esc(p.name)}</span></div>`).join('')}</div>`;}
+
+/* ---------- иллюстрации ---------- */
+function quad(x,y,s,c){return `<g transform="translate(${x} ${y}) scale(${s})" fill="${c}"><circle cx="8" cy="0" r="8"/><circle cx="46" cy="0" r="8"/><path d="M4 -6 L16 -17 L36 -17 L50 -7 L50 -3 L4 -3Z"/><path d="M30 -17 L33 -28 L43 -28 L41 -24 L37 -24 L35 -17Z"/></g>`;}
+function scene(kind){
+  const T={night:['#080C1C','#2A1B33','#EBDDBE'],dawn:['#3B2A4A','#F29A2E','#FFE7A8'],dusk:['#2A1B33','#A93822','#EBDDBE']}[kind];
+  const stars=kind==='dawn'?'':[[30,24],[88,50],[140,18],[250,30],[320,16],[360,58],[200,44],[60,90]].map((s,i)=>`<circle class="star" style="animation-delay:${i*.4}s" cx="${s[0]}" cy="${s[1]}" r="1.6" fill="#EBDDBE"/>`).join('');
+  const sky=kind==='dawn'?`<circle cx="300" cy="128" r="34" fill="${T[2]}"/>`:`<circle cx="305" cy="46" r="20" fill="${T[2]}"/><circle cx="313" cy="41" r="18" fill="${T[0]}"/>`;
+  return `<svg class="scene" viewBox="0 0 390 190" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Лагерь в степи, ${kind==='dawn'?'рассвет':kind==='dusk'?'закат':'ночь'}">
+  <defs><linearGradient id="g-${kind}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${T[0]}"/><stop offset="1" stop-color="${T[1]}"/></linearGradient>
+  <radialGradient id="f-${kind}"><stop offset="0" stop-color="#F29A2E" stop-opacity=".55"/><stop offset="1" stop-color="#F29A2E" stop-opacity="0"/></radialGradient></defs>
+  <rect width="390" height="190" fill="url(#g-${kind})"/>${stars}${sky}
+  <path d="M0 140 C60 118 110 128 170 134 C230 140 300 112 390 128 L390 190 L0 190Z" fill="#1B130E"/>
+  <path d="M0 160 C80 146 150 156 230 152 C300 148 350 158 390 150 L390 190 L0 190Z" fill="#100B08"/>
+  <circle cx="195" cy="150" r="60" fill="url(#f-${kind})"/>
+  <g class="flame"><path d="M195 124 C186 138 184 150 195 158 C206 150 204 138 195 124Z" fill="#F29A2E"/><path d="M195 138 C191 146 191 152 195 156 C199 152 199 146 195 138Z" fill="#FFE7A8"/></g>
+  <path d="M184 160 L206 160 L200 164 L190 164Z" fill="#3A2412"/>
+  ${quad(40,158,1.1,'#0B0806')}${quad(290,162,1,'#0B0806')}
+  <path d="M120 160 L136 134 L152 160Z" fill="#0B0806"/><path d="M240 162 L258 138 L276 162Z" fill="#0B0806"/>
+  </svg>`;
+}
+
+/* ---------- каркас ---------- */
+function topbar(){
+  const st=STEP_OF[S.screen];
+  const bar=S.screen==='intro'?'':`<div class="steps">${STEPS.map((s,i)=>`<i class="${i<st?'on':i===st?'now':''}"></i>`).join('')}</div><div class="stepname">Раунд ${S.round} · ${STEPS[st]}</div>`;
+  return `<div class="top"><div class="brand">ДИКАЯ ПОЕЗДКА</div><div class="pts">Очки <span>${total()}</span></div></div>${bar}`;
+}
+function render(){
+  const f=SCREENS[S.screen];
+  $('#app').innerHTML=topbar()+f.html();
+  if(f.after)f.after();
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]');if(!el||el.disabled)return;
+  const a=el.dataset.a,v=el.dataset.v;
+  if(ACT[a])ACT[a](v,el);
+});
+
+/* ---------- экраны ---------- */
+const SCREENS={
+intro:{html:()=>`${scene('night')}<div class="body">
+  <h1>Ночной заезд</h1>
+  ${TG.user?`<p class="muted">Привет, ${esc(TG.user.first_name||'путник')}! Твоя аватарка из Telegram уже в лагере.</p>`:''}
+  ${STORE.get('games',0)?`<p class="muted">Сыграно партий: ${STORE.get('games',0)} · лучший счёт: ${STORE.get('best',0)}</p>`:''}
+  <p class="story"><small>Рассказчик</small>Семеро участников экспедиции встали лагерем в степи. Каждую ночь один квадроцикл выходит из строя, каждый день лагерь решает, кого исключить. Играем до победы одной из сторон.</p>
+  <div class="card"><b>Фото игроков</b><p class="muted" style="font-size:14px;margin:4px 0 8px">Фото появятся у костра, в списках, на карточках выбывших и в конкурсе «Чьё лицо?». Здесь можно загрузить фото за каждого, в настоящей игре каждый добавляет своё.</p>
+  <div class="list">${NAMES.map((n,i)=>`<div class="photorow">${avHtml({id:i,name:n},44)}<span class="nm">${i===0?'Ты':n}</span><label class="btn ghost small">${S.photos[i]?'Заменить':'Загрузить'}<input type="file" accept="image/*" hidden data-pid="${i}" aria-label="Фото: ${n}"></label></div>`).join('')}</div></div>
+  <h2>Выбери роль</h2>
+  <div class="grid2">${Object.entries(ROLES).map(([k,r])=>`<button class="role" data-a="pickRole" data-v="${k}"><b>${r.n}</b><span>${r.desc}</span></button>`).join('')}</div>
+  <p class="muted" style="font-size:14px">Пока это одиночный режим: остальные игроки придуманы. Фото остаются на твоём телефоне и никуда не отправляются.</p></div>`},
+
+night:{html:()=>{
+  const r=ROLES[S.role];const n=S.night;
+  const mates=S.players.filter(p=>p.id!==0&&bad(p)&&p.alive&&bad(me()));
+  const task=`<div class="task ${S.taskDone?'done':''}"><b>Тайное задание раунда</b><br>${S.task.text} За выполнение 2 очка.</div>`;
+  let act='';
+  if(S.role==='tourist'){
+    act=`<h2>Ты стережёшь костёр</h2><p class="muted">Запомни порядок огней и повтори его. Чем дольше игра, тем длиннее порядок.</p>
+    <div class="pads">${['#F29A2E','#9DB05F','#E8664C','#7FB3C9'].map((c,i)=>`<button class="pad" id="pad${i}" data-a="pad" data-v="${i}" style="background:${c}" aria-label="Огонь ${i+1}"></button>`).join('')}</div>
+    <p id="memst" class="muted">Смотри внимательно…</p>`;
+  }else{
+    const title={saboteur:'Кого выведем из строя?',mechanic:'Чью машину чиним?',tracker:'По чьим следам идём?'}[S.role];
+    const list=alive().filter(p=>S.role==='mechanic'?true:p.id!==0&&!(S.role==='saboteur'&&bad(p)));
+    act=`<h2>${title}</h2>${mates.length?`<p class="muted">Твой напарник: <b style="color:var(--sand)">${esc(mates[0].name)}</b></p>`:''}
+    <div class="list">${list.map(p=>`<button class="pl ${n.target===p.id?'sel':''}" data-a="target" data-v="${p.id}" ${n.locked?'disabled':''}>${avHtml(p)}<span class="nm">${p.id===0?'Ты сам':esc(p.name)}</span></button>`).join('')}</div>
+    ${n.info?`<div class="card">${n.info}</div>`:''}`;
+  }
+  return `${scene('night')}<div class="body"><div class="story"><small>Ночь ${S.round}</small>${NIGHT_STORY[(S.round-1)%NIGHT_STORY.length]} Ты проснулся как <b>${r.n}</b>.</div>${act}${task}
+  <button class="btn" id="next" data-a="morning" ${n.ready?'':'disabled'}>Дождаться утра</button></div>`;
+ },after:()=>{if(S.role==='tourist'&&!S.mem)startMemory();}},
+
+morning:{html:()=>{
+  const v=S.victim,ev=S.event;
+  const lost=v&&!S.saved;
+  const head=lost?(v.id===0?`Ночью вышел из строя твой квадроцикл. Ты выбываешь из лагеря и дальше наблюдаешь. Твоя роль: <b>${ROLES[v.role].n}</b>.`:`Ночью вышел из строя квадроцикл. Выбывает <b>${esc(v.name)}</b>, роль: <b>${ROLES[v.role].n}</b>.`):'Ночью кто-то пытался испортить чью-то машину, но механик успел её починить. Никто не выбыл.';
+  const mine=me().alive||v.id===0?{saboteur:S.saved?'Механик спас твою жертву.':'Твоя диверсия удалась.',mechanic:S.saved?'Ты починил именно ту машину, которую выбрал диверсант.':'Диверсант выбрал другую машину.',tracker:'',tourist:''}[S.role]:'';
+  return `${scene('dawn')}<div class="body"><div class="story"><small>Утро ${S.round}</small>${head}</div>
+  ${lost?`<div class="card" style="display:flex;gap:14px;align-items:center">${S.photos[v.id]?`<img class="big" src="${S.photos[v.id]}" alt="${esc(v.name)}" style="filter:grayscale(1)">`:avHtml(v,80)}<div><b>${esc(v.name)}</b><br><span class="tag bad">Выбыл</span></div></div>`:''}
+  ${mine?`<p class="muted">${mine}</p>`:''}
+  ${S.hint?`<div class="card"><span class="tag good">Твоя подсказка</span><p style="margin-top:8px">${S.hint}</p></div>`:''}
+  ${S.role==='tracker'&&S.night.info&&me().alive?`<div class="card">${S.night.info}</div>`:''}
+  ${ev?`<div class="card"><span class="tag">Событие утра</span><h2 style="margin:8px 0 6px">${ev.title}</h2><p>${ev.text}</p></div>`:''}
+  <div class="card"><b>В лагере осталось ${alive().length}</b>${gallery()}</div>
+  <button class="btn" data-a="toDay">${me().alive?'К костру, обсуждать':'Наблюдать дальше'}</button></div>`;}},
+
+day:{html:()=>{
+  const t=S.task;
+  return `${scene('dusk')}<div class="body"><h2>Обсуждение у костра</h2>${gallery()}
+  <div class="task ${S.taskDone?'done':''}" id="task">${S.taskDone?'<b>Задание выполнено</b>':`<b>Тайное задание${t.need>1?' ('+S.taskProg+' из '+t.need+')':''}</b><br>${t.text}`}</div>
+  <div class="chat" id="chat" aria-live="polite"></div>
+  <div class="chips">${alive().filter(p=>p.id!==0).map(p=>`<button class="chip" data-a="chip" data-v="Подозреваю ${esc(p.name)}">Подозреваю ${esc(p.name)}</button>`).join('')}</div>
+  <div class="row"><input id="msg" type="text" placeholder="Напиши или продиктуй" autocomplete="off" aria-label="Сообщение"><button class="btn" data-a="send">Отправить</button></div>
+  <div class="row"><button class="btn ghost" style="flex:1" data-a="dictate" id="dict">Диктовать голосом</button>
+  ${t.kind==='photo'&&!S.taskDone?`<label class="btn ghost" style="flex:1">Прикрепить фото<input type="file" accept="image/*" hidden data-task="1" aria-label="Фото для задания"></label>`:''}</div>
+  <p id="dictst" class="muted" style="font-size:14px" aria-live="polite"></p>
+  <button class="btn" data-a="toContest">Перейти к конкурсу</button></div>`;},after:()=>startChat()},
+
+contest:{html:()=>{
+  const c=S.contest;
+  if(c.done){
+    const w=P(c.winner);
+    return `${scene('dusk')}<div class="body"><h2>Итоги: ${c.title}</h2>
+    <div class="card"><div class="list">${alive().map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">${avHtml(p,30)}<span style="flex:1">${esc(p.name)}</span><b>${c.labels[p.id]}</b></div>`).join('')}</div></div>
+    <div class="story"><small>Награда</small>${w.id===0?'Ты победил и получаешь иммунитет: сегодня тебя нельзя исключить.':`Победа: ${esc(w.name)}. Сегодня этого игрока нельзя исключить из лагеря.`}</div>
+    <button class="btn" data-a="toVote">К голосованию</button></div>`;
+  }
+  if(c.type==='react'){
+    return `${scene('dusk')}<div class="body"><span class="tag">Конкурс «${c.title}»</span><h2>Лови огонь</h2><p class="muted">Нажми, как только кнопка станет зелёной. Три попытки, считается среднее время. Ранний нажим даёт штраф.</p>
+    <button class="rbtn wait" id="rbtn" data-a="rtap">Жди зелёного…</button>
+    <p class="muted" id="rres">Попытка ${c.times.length+1} из 3${c.times.length?'. Прошлые: '+c.times.map(t=>t+' мс').join(', '):''}</p></div>`;
+  }
+  if(c.type==='stop'){
+    const last=c.tries.length?c.tries[c.tries.length-1]:null;
+    return `${scene('dusk')}<div class="body"><span class="tag">Конкурс «${c.title}»</span><h2>Останови ровно на 5,00</h2><p class="muted">Нажми «Старт» и считай про себя. Цифры исчезнут через полторы секунды. Две попытки, засчитывается лучшая.</p>
+    <div class="sdisp" id="sdisp" aria-live="off">${last===null?'0.00':(last/1000).toFixed(2)}</div>
+    ${last!==null?`<p class="muted" style="text-align:center">Попытка ${c.tries.length}: ${(last/1000).toFixed(2)} с, ошибка ${(Math.abs(last-5000)/1000).toFixed(2)} с</p>`:''}
+    <button class="rbtn go" id="sbtn" data-a="stap">Старт</button>
+    <p class="muted">Попытка ${Math.min(c.tries.length+1,2)} из 2</p></div>`;
+  }
+  const q=c.qs[c.i];
+  const img=q.img?`<div class="qimg" style="background-image:url('${q.img}');${c.answered?'background-size:cover;background-position:center':`background-size:${q.zoom}%;background-position:${q.px}% ${q.py}%`}" role="img" aria-label="Фото игрока"></div>`:'';
+  return `${scene('dusk')}<div class="body"><span class="tag">Конкурс «${c.title}» · вопрос ${c.i+1} из ${c.qs.length}</span><h2>${q.q}</h2>${img}${q.big?`<div class="bigq ${q.bigSmall?'txt':''}">${esc(q.big)}</div>`:''}
+  <div class="list">${q.o.map((o,i)=>`<button class="opt ${c.answered?(i===q.a?'ok':i===c.picked?'bad':''):''}" data-a="answer" data-v="${i}" ${c.answered?'disabled':''}>${esc(o)}</button>`).join('')}</div>
+  <p class="muted">Победитель конкурса получает иммунитет на сегодняшнем голосовании.</p>
+  ${c.answered?`<button class="btn" data-a="qnext">${c.i===c.qs.length-1?'Узнать итоги':'Дальше'}</button>`:''}</div>`;},
+  after:()=>{if(S.contest.type==='react'&&!S.contest.done)startReact();}},
+
+vote:{html:()=>{
+  const v=S.vote;
+  return `${scene('dusk')}<div class="body"><h2>Кого исключаем?</h2><p class="muted">Большинство голосов решает. При ничьей не исключают никого.</p>
+  <div class="list">${alive().filter(p=>p.id!==0).map(p=>`<button class="pl ${v.choice===p.id?'sel':''} ${S.immune===p.id?'imm':''}" data-a="vchoose" data-v="${p.id}" ${S.immune===p.id?'disabled':''}>${avHtml(p,44)}<span class="nm">${esc(p.name)}</span>${S.immune===p.id?'<span class="sub">иммунитет</span>':''}</button>`).join('')}
+  <button class="pl ${v.choice===-1?'sel':''}" data-a="vchoose" data-v="-1"><span class="nm">Никого</span></button></div>
+  <button class="btn danger" data-a="vsend" ${v.choice===null?'disabled':''}>Проголосовать</button></div>`;}},
+
+result:{html:()=>{
+  const t=S.tally,ex=S.executed;const max=Math.max(1,...Object.values(t.count));
+  const rows=Object.entries(t.count).sort((a,b)=>b[1]-a[1]).map(([id,c])=>`<div><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">${avHtml(P(+id),30)}<b style="flex:1">${esc(P(+id).name)}</b><span>${c} гол.</span></div><div class="bar"><i style="width:${c/max*100}%"></i></div></div>`).join('');
+  const w=winner();
+  return `${scene('dusk')}<div class="body"><h2>Итоги голосования</h2><div class="card list">${rows||'<span class="muted">Никто не получил голосов.</span>'}</div>
+  ${ex?`<div class="card" style="display:flex;gap:14px;align-items:center">${S.photos[ex.id]?`<img class="big" src="${S.photos[ex.id]}" alt="${esc(ex.name)}" style="filter:grayscale(1)">`:avHtml(ex,80)}<div><b>${esc(ex.name)}</b><br><span class="tag ${bad(ex)?'good':'bad'}">${ROLES[ex.role].n}</span></div></div>`:''}
+  <div class="story"><small>Рассказчик</small>${ex?`${ex.id===0?'Лагерь исключил тебя. Дальше ты наблюдаешь со стороны.':`Лагерь исключил <b>${esc(ex.name)}</b>. ${bad(ex)?'Диверсант найден.':'Это был невиновный.'}`}`:'Голоса разошлись, сегодня лагерь никого не исключил.'}${w?' Игра окончена.':''}</div>
+  <button class="btn" data-a="toNext">${w?'Подвести итоги игры':'Следующая ночь'}</button></div>`;}},
+
+spectate:{html:()=>`${scene('dusk')}<div class="body"><h2>Ты наблюдаешь</h2><p class="muted">Ты выбыл, лагерь играет без тебя. Вот что произошло.</p>
+  <div class="card list">${S.spec.lines.map(l=>`<p>${l}</p>`).join('')}</div>${gallery()}
+  <button class="btn" data-a="specNext">${S.spec.end?'Подвести итоги игры':'Следующий раунд'}</button></div>`},
+
+final:{html:()=>{
+  const w=winner(),myBad=bad(me()),win=(w==='saboteurs')===myBad;
+  const rate=S.players.map(p=>({p,pts:p.id===0?total():S.botPts[p.id]})).sort((a,b)=>b.pts-a.pts);
+  return `${scene('dawn')}<div class="body"><h1>${w==='camp'?'Лагерь победил':'Победили диверсанты'}</h1>
+  <p class="story"><small>Рассказчик</small>${w==='camp'?'Все диверсанты найдены. Утром колонна выезжает на трассу.':'Диверсантов в лагере стало не меньше, чем остальных. Колонна так и не тронулась.'} Сыграно раундов: ${S.round}. ${win?'Твоя сторона выиграла.':'Твоя сторона проиграла.'}</p>
+  <div class="card"><b>Твои очки: ${total()}</b><div class="list" style="margin-top:8px">${S.ledger.map(l=>`<div style="display:flex;justify-content:space-between;gap:10px"><span>${l.label}</span><b style="color:var(--amber)">+${l.n}</b></div>`).join('')}</div></div>
+  <h2>Достижения</h2>
+  ${S.badges.length?S.badges.map(b=>`<div class="badge"><div class="ic">${b[0]}</div><div><b>${b}</b><div class="muted" style="font-size:14px">${BADGE_TEXT[b]}</div></div></div>`).join(''):'<p class="muted">Достижений нет. Выполняй тайные задания и побеждай в конкурсах.</p>'}
+  <h2>Рейтинг игры</h2><table>${rate.map((r,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:10px">${i+1}. ${avHtml(r.p,28)}${esc(r.p.name)}</span></td><td class="n">${r.pts}</td></tr>`).join('')}</table>
+  <button class="btn" data-a="again">Сыграть ещё раз</button></div>`;}}
+};
+const BADGE_TEXT={'Хамелеон':'Выполнил тайное задание.','Фотограф':'Выполнил фотозадание.','Зоркий глаз':'Проголосовал против диверсанта.','Железная память':'Прошёл ночную игру на память.','Знаток трассы':'Ответил верно на все вопросы конкурса.','Ночной гость':'Диверсия прошла успешно.','Вовремя починил':'Спас игрока от диверсии.','Следопыт-ас':'Нашёл диверсанта по следам.','Выживший':'Дожил до конца игры.','Меткий палец':'Выиграл конкурс на реакцию.','Детектор лжи':'Без ошибок в «Правде или выдумке».','Шифровальщик':'Разгадал все поговорки в эмодзи.','Грамотей':'Собрал все слова из букв.','Калькулятор':'Решил все примеры в «Быстром счёте».','Физиономист':'Узнал всех по фото.','Стальные нервы':'Выиграл «Стоп-кран».'};
+
+/* ---------- действия ---------- */
+const ACT={
+  pickRole:v=>setup(v),
+  target:v=>{
+    if(S.night.locked)return;
+    const id=+v,p=P(id);S.night.target=id;S.night.locked=true;S.night.ready=true;
+    if(S.role==='tracker'){const isBad=bad(p);S.night.info=isBad?`<b>${esc(p.name)}</b>: следы ведут к диверсанту. <span class="tag bad">Диверсант</span>`:`<b>${esc(p.name)}</b>: следы чистые. <span class="tag good">Не диверсант</span>`;S.night.found=isBad;}
+    render();
+  },
+  pad:v=>padPress(+v),
+  morning:()=>{resolveNight();go('morning');},
+  toDay:()=>{
+    if(winner()){finalScoring();go('final');return;}
+    if(!me().alive){runSpectate(false);go('spectate');return;}
+    go('day');
+  },
+  chip:v=>{const i=$('#msg');i.value=v;i.focus();},
+  send:()=>sendMsg(),
+  dictate:()=>dictate(),
+  toContest:()=>{startContest();go('contest');},
+  answer:v=>{const c=S.contest;if(c.answered)return;c.picked=+v;c.answered=true;if(+v===c.qs[c.i].a){c.score++;haptic('success');}else haptic('error');render();},
+  qnext:()=>{const c=S.contest;c.answered=false;c.picked=null;if(c.i<c.qs.length-1){c.i++;render();}else finishQuiz();},
+  rtap:()=>reactTap(),
+  stap:()=>stopTap(),
+  toVote:()=>go('vote'),
+  vchoose:v=>{S.vote.choice=+v;render();},
+  vsend:()=>{tallyVotes(S.vote.choice);go('result');},
+  toNext:()=>{if(winner()){finalScoring();go('final');}else nextRound();},
+  specNext:()=>{if(S.spec.end){finalScoring();go('final');}else nextRound();},
+  again:()=>{newGame(true);render();}
+};
+
+/* ---------- ночь ---------- */
+function resolveNight(){
+  const al=alive();
+  let victim;
+  if(S.role==='saboteur'&&me().alive&&S.night.target!==undefined)victim=P(S.night.target);
+  else victim=pick(al.filter(p=>!bad(p)));
+  let guard=-1;
+  const mech=S.players.find(p=>p.role==='mechanic'&&p.alive);
+  if(mech)guard=mech.id===0?(S.night.target===undefined?-1:S.night.target):pick(al).id;
+  S.victim=victim;S.saved=victim.id===guard;
+  if(!S.saved)victim.alive=false;
+  const meAlive=me().alive||victim.id===0;
+  if(meAlive){
+    if(S.role==='saboteur'&&!S.saved)addPts(2,'Диверсия удалась','Ночной гость');
+    if(S.role==='mechanic'&&S.saved)addPts(3,'Спас игрока','Вовремя починил');
+    if(S.role==='tracker'&&S.night.found)addPts(2,'Нашёл диверсанта по следам','Следопыт-ас');
+  }
+  const innocents=alive().filter(p=>p.id!==0&&!bad(p)),badBots=alive().filter(p=>bad(p)&&p.id!==0);
+  if(S.mem&&S.mem.ok&&badBots.length&&innocents.length){
+    const pair=shuffle([pick(badBots),pick(innocents)]);
+    S.hint=`Ты слышал шаги у костра. Это были ${esc(pair[0].name)} или ${esc(pair[1].name)}.`;
+  }
+  if(!me().alive){S.event=null;return;}
+  const evs=[];
+  if(innocents.length>1)evs.push({k:'radio',title:'Ожила рация',text:`Сквозь помехи слышно: ${esc(pick(innocents).name)} всю ночь на виду у костра, это точно не диверсант.`});
+  evs.push({k:'count',title:'Разведка вернулась',text:`Следы показывают: диверсантов в лагере осталось ${alive().filter(bad).length}.`});
+  if(badBots.length&&innocents.length){const pr=shuffle([pick(badBots),pick(innocents)]);evs.push({k:'tracks',title:'Свежие следы',text:`Следы у техники ведут к двум палаткам: ${esc(pr[0].name)} и ${esc(pr[1].name)}. Кто-то из них точно ходил к стоянке.`});}
+  evs.push({k:'fog',title:'Туман над степью',text:'Видимость нулевая, никто не видел, что было у соседних палаток. Полагайтесь на слова.'});
+  evs.push({k:'stars',title:'Звездопад',text:'Ночью над степью падали звёзды. Каждый загадал желание: всем живым по очку.'});
+  evs.push({k:'convoy',title:'Чужая колонна',text:'Под утро мимо лагеря прошла чужая колонна. Шум разбудил всех, но никто ничего толком не разглядел.'});
+  if(badBots.length&&innocents.length>1){const tr=shuffle([pick(badBots),...shuffle(innocents).slice(0,2)]);evs.push({k:'glove',title:'Перчатка у стоянки',text:`У техники нашли перчатку в бензине. Такие перчатки у троих: ${esc(tr[0].name)}, ${esc(tr[1].name)}, ${esc(tr[2].name)}.`});}
+  evs.push({k:'find',title:'Находка в лагере',text:'В палатке нашли термос с горячим чаем. Всем живым игрокам по очку за бодрость.'});
+  const pool=evs.filter(e=>e.k!==S.lastEvent);
+  S.event=pick(pool.length?pool:evs);S.lastEvent=S.event.k;
+  if(S.event.k==='find')addPts(1,'Находка в лагере');if(S.event.k==='stars')addPts(1,'Звездопад');
+}
+
+let SEQ=[];
+function startMemory(){
+  const len=Math.min(7,3+S.round);
+  S.mem={ok:null,input:[],ready:false};SEQ=Array.from({length:len},()=>rnd(4));
+  const lit=(i,on)=>{const el=$('#pad'+i);if(el)el.classList.toggle('lit',on);};
+  SEQ.forEach((n,i)=>{timers.push(setTimeout(()=>lit(n,true),900+i*750));timers.push(setTimeout(()=>lit(n,false),900+i*750+420));});
+  timers.push(setTimeout(()=>{S.mem.ready=true;const s=$('#memst');if(s)s.textContent='Теперь повтори порядок.';},900+SEQ.length*750));
+}
+function padPress(i){
+  const m=S.mem;if(!m||!m.ready||m.ok!==null)return;
+  const el=$('#pad'+i);el.classList.add('lit');setTimeout(()=>el.classList.remove('lit'),200);
+  m.input.push(i);const k=m.input.length-1;
+  if(SEQ[k]!==i){m.ok=false;$('#memst').textContent='Ошибка, огонь потерян. Подсказки не будет.';S.night.ready=true;$('#next').disabled=false;return;}
+  if(m.input.length===SEQ.length){m.ok=true;$('#memst').textContent='Верно. Ты услышишь шаги утром.';S.night.ready=true;$('#next').disabled=false;addPts(1,'Железная память','Железная память');}
+}
+
+/* ---------- чат и голосовой ввод ---------- */
+function addMsg(who,text,mine,img){
+  const c=$('#chat');if(!c)return;
+  const d=document.createElement('div');d.className='msg'+(mine?' me':'');
+  const b=document.createElement('b');b.textContent=who;d.appendChild(b);
+  if(text)d.appendChild(document.createTextNode(text));
+  if(img){const im=document.createElement('img');im.src=img;im.alt='Фото из чата';d.appendChild(im);}
+  c.appendChild(d);c.scrollTop=c.scrollHeight;
+}
+function startChat(){
+  if(S.chat.length)S.chat.forEach(m=>addMsg(m.who,m.text,m.mine,m.img));
+  if(S.chatStarted)return;
+  S.chatStarted=true;
+  const bots=shuffle(alive().filter(p=>p.id!==0));
+  const dead=S.players.filter(p=>!p.alive);
+  bots.forEach((b,i)=>{
+    timers.push(setTimeout(()=>{
+      const others=alive().filter(p=>p.id!==b.id);
+      const cands=bad(b)?others.filter(p=>!bad(p)):others;
+      const target=pick(cands.length?cands:others);
+      let bank=bad(b)||Math.random()<.5?BOT_ACCUSE:BOT_CALM.concat(BOT_ACCUSE);
+      if(target.id===0)bank=bank.filter(t=>t.includes('{X},'));
+      let text=fmt(pick(bank),b,target.id===0?{name:'ты'}:target);
+      text=text.replace(/^ты/,'Ты');
+      if(i===0&&dead.length&&S.round>1){const d=pick(dead);text=`Жаль, что ${d.name} ${FEM(d)?'выбыла':'выбыл'}. Надо быть осторожнее.`;}
+      S.chat.push({who:b.name,text});addMsg(b.name,text);
+    },1200+i*1800));
+  });
+}
+function sendMsg(){
+  const i=$('#msg');const t=i.value.trim();if(!t)return;
+  S.chat.push({who:'Ты',text:t,mine:true});addMsg('Ты',t,true);i.value='';
+  haptic('light');taskHit(t);botReply(t);
+}
+/* боты отвечают: на упоминание имени оправдываются, на вопрос отвечает кто-то из лагеря */
+function botReply(t){
+  const bots=alive().filter(p=>p.id!==0);if(!bots.length)return;
+  const named=bots.filter(b=>norm(t).includes(norm(b.name).slice(0,3)));
+  let who=null,bank=null;
+  if(named.length){who=pick(named);bank=BOT_DEFEND;}
+  else if(t.includes('?')||Math.random()<.35){who=pick(bots);bank=BOT_ANSWER;}
+  if(!who)return;
+  const others=alive().filter(p=>p.id!==who.id&&p.id!==0);
+  const cands=bad(who)?others.filter(p=>!bad(p)):others;
+  const x=pick(cands.length?cands:(others.length?others:[me()]));
+  if(x.id===0)bank=bank.filter(t=>t.includes('{X},')||!t.includes('{X}'));
+  const text=fmt(pick(bank),who,x.id===0?{name:'ты'}:x).replace(/^ты/,'Ты');
+  timers.push(setTimeout(()=>{S.chat.push({who:who.name,text});addMsg(who.name,text);},900+rnd(900)));
+}
+let REC=null;
+function dictate(){
+  const st=$('#dictst'),inp=$('#msg'),btn=$('#dict');
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const fallback=why=>{st.textContent=(why?why+' ':'')+'Нажми на микрофон на клавиатуре телефона, чтобы продиктовать. Поле уже выбрано.';inp.focus();if(btn)btn.textContent='Диктовать голосом';REC=null;};
+  if(REC){try{REC.stop();}catch(e){}return;}
+  if(!SR){fallback('Здесь нет встроенного распознавания речи.');return;}
+  try{
+    const r=new SR();REC=r;r.lang='ru-RU';r.interimResults=true;r.continuous=false;
+    r.onstart=()=>{st.textContent='Слушаю… говори, потом нажми ещё раз, чтобы закончить.';btn.textContent='Остановить';};
+    r.onresult=e=>{let t='';for(let k=0;k<e.results.length;k++)t+=e.results[k][0].transcript;inp.value=t;};
+    r.onerror=e=>fallback(e.error==='not-allowed'||e.error==='service-not-allowed'?'Доступ к микрофону не дан.':'Не удалось распознать речь.');
+    r.onend=()=>{if(REC){REC=null;btn.textContent='Диктовать голосом';if(inp.value)st.textContent='Проверь текст и нажми «Отправить».';}};
+    r.start();
+  }catch(e){fallback('Распознавание не запустилось.');}
+}
+
+/* ---------- конкурсы: каждый раунд новый тип и новые вопросы ---------- */
+const CONTEST_TITLE={quiz:'Знаток трассы',truth:'Правда или выдумка',emoji:'Поговорка в эмодзи',anagram:'Слово из букв',math:'Быстрый счёт',react:'Лови огонь',stop:'Стоп-кран',photo:'Чьё лицо?'};
+const PERFECT_BADGE={quiz:'Знаток трассы',truth:'Детектор лжи',emoji:'Шифровальщик',anagram:'Грамотей',math:'Калькулятор',photo:'Физиономист'};
+/* берёт n ещё не использованных номеров из банка, при нехватке начинает банк заново */
+function takeFresh(bankLen,usedKey,n){
+  let used=(USED[usedKey]||[]).filter(i=>i<bankLen);
+  let free=[...Array(bankLen).keys()].filter(i=>!used.includes(i));
+  if(free.length<n){used=[];free=[...Array(bankLen).keys()];}
+  const out=shuffle(free).slice(0,n);USED[usedKey]=used.concat(out);STORE.set('used',USED);return out;
+}
+function mixed(right,wrongs){const o=shuffle([right,...wrongs]);return {o,a:o.indexOf(right)};}
+function scramble(w){const up=w.toUpperCase();for(let t=0;t<20;t++){const s=shuffle([...up]).join('');if(s!==up)return s;}return up;}
+function startContest(){
+  const photoOwners=S.players.filter(p=>p.id!==0&&S.photos[p.id]);
+  const types=['quiz','truth','emoji','anagram','math','react','stop'];
+  if(photoOwners.length>=2)types.push('photo','photo');
+  S.recent=S.recent||[];
+  const fresh=types.filter(t=>!S.recent.includes(t));
+  const type=pick(fresh.length?fresh:types);
+  S.recent.push(type);if(S.recent.length>3)S.recent.shift();S.lastContest=type;
+  const c={type,title:CONTEST_TITLE[type],done:false,i:0,score:0,answered:false,picked:null,times:[],labels:{},scores:{}};
+  const qs=[];
+  if(type==='photo'){
+    shuffle(photoOwners).slice(0,3).forEach(o=>{
+      const names=shuffle(NAMES.filter(n=>n!==o.name)).slice(0,3);
+      const m=mixed(o.name,names);
+      qs.push({q:'Чьё это фото? Кадр показан крупным планом.',...m,img:S.photos[o.id],zoom:380+rnd(120),px:20+rnd(60),py:20+rnd(60)});
+    });
+  }
+  if(type==='quiz'||type==='photo'){
+    takeFresh(QBANK.length,'usedQ',3-qs.length).forEach(i=>{const b=QBANK[i];qs.push({q:b[0],...mixed(b[1],b.slice(2))});});
+  }
+  if(type==='truth'){
+    takeFresh(TRUTH.length,'usedT',4).forEach(i=>{const [s,v]=TRUTH[i];qs.push({q:'Правда или выдумка?',big:s,bigSmall:true,o:['Правда','Выдумка'],a:v?0:1});});
+  }
+  if(type==='emoji'){
+    takeFresh(EMOJI.length,'usedE',3).forEach(i=>{const [e,ans]=EMOJI[i];const wr=shuffle(EMOJI.filter((_,k)=>k!==i).map(x=>x[1])).slice(0,3);qs.push({q:'Какая поговорка зашифрована?',big:e,...mixed(ans,wr)});});
+  }
+  if(type==='anagram'){
+    takeFresh(WORDS.length,'usedA',3).forEach(i=>{const w=WORDS[i][0];const wr=shuffle(WORDS.filter((_,k)=>k!==i).map(x=>x[0])).slice(0,3);qs.push({q:'Какое слово спряталось в буквах?',big:scramble(w),...mixed(w,wr)});});
+  }
+  if(type==='math'){
+    for(let k=0;k<4;k++){
+      const op=pick(['+','−','×']);let x,y,r;
+      if(op==='+'){x=12+rnd(80);y=12+rnd(80);r=x+y;}
+      if(op==='−'){x=40+rnd(60);y=11+rnd(x-20);r=x-y;}
+      if(op==='×'){x=3+rnd(10);y=4+rnd(9);r=x*y;}
+      const wr=new Set();for(const d of shuffle([1,2,10,-1,-2,-10,3,-3]))if(wr.size<3&&r+d>0)wr.add(String(r+d));
+      qs.push({q:'Сколько будет?',big:`${x} ${op} ${y}`,...mixed(String(r),[...wr])});
+    }
+  }
+  if(type==='stop'){c.tries=[];c.phase='idle';}
+  c.qs=qs;S.contest=c;
+}
+function finishQuiz(){
+  const c=S.contest,al=alive(),n=c.qs.length;
+  al.forEach(p=>{c.scores[p.id]=p.id===0?c.score:Math.min(n,Math.max(0,Math.round(n*(.35+Math.random()*.55))));c.labels[p.id]=c.scores[p.id]+' из '+n;});
+  al.filter(p=>p.id!==0).forEach(p=>S.botPts[p.id]+=c.scores[p.id]);
+  const best=Math.max(...al.map(p=>c.scores[p.id]));
+  const top=al.filter(p=>c.scores[p.id]===best).map(p=>p.id);
+  c.winner=top.includes(0)?0:pick(top);S.immune=c.winner;
+  if(c.score>0)addPts(c.score,'Верные ответы: '+c.title);
+  if(c.score===n&&PERFECT_BADGE[c.type]&&!S.badges.includes(PERFECT_BADGE[c.type]))S.badges.push(PERFECT_BADGE[c.type]);
+  if(c.winner===0)addPts(2,'Победа в конкурсе');
+  c.done=true;render();
+}
+/* «Стоп-кран»: останови таймер ровно на 5,00 секунды, цифры скрываются через 1,5 секунды */
+function stopTap(){
+  const c=S.contest;if(!c||c.type!=='stop'||c.done)return;
+  if(c.phase==='idle'||c.phase==='shown'){
+    c.phase='run';c.t0=performance.now();
+    const btn=$('#sbtn'),disp=$('#sdisp');if(btn)btn.textContent='Стоп!';
+    const iv=setInterval(()=>{const t=(performance.now()-c.t0)/1000;const d=$('#sdisp');if(!d)return;d.textContent=t<1.5?t.toFixed(2):'?.??';},30);
+    timers.push(iv);if(disp)disp.textContent='0.00';
+    return;
+  }
+  if(c.phase==='run'){
+    clearTimers();
+    const t=Math.round(performance.now()-c.t0);c.tries.push(t);c.phase='shown';haptic('medium');
+    if(c.tries.length<2){render();return;}
+    finishStop();
+  }
+}
+function finishStop(){
+  const c=S.contest,al=alive();
+  const myErr=Math.min(...c.tries.map(t=>Math.abs(t-5000)));
+  al.forEach(p=>{c.scores[p.id]=p.id===0?myErr:40+rnd(650);c.labels[p.id]='±'+(c.scores[p.id]/1000).toFixed(2)+' с';});
+  al.filter(p=>p.id!==0).forEach(p=>S.botPts[p.id]+=c.scores[p.id]<250?2:1);
+  const best=Math.min(...al.map(p=>c.scores[p.id]));
+  c.winner=al.find(p=>c.scores[p.id]===best).id;S.immune=c.winner;
+  if(myErr<300)addPts(1,'Точное чувство времени');
+  if(c.winner===0)addPts(2,'Победа в конкурсе','Стальные нервы');
+  c.done=true;render();
+}
+function startReact(){
+  const c=S.contest;c.phase='wait';
+  timers.push(setTimeout(()=>{c.phase='go';c.t0=performance.now();const b=$('#rbtn');if(b){b.className='rbtn go';b.textContent='Жми!';}},1200+rnd(2200)));
+}
+function reactTap(){
+  const c=S.contest;if(!c||c.type!=='react'||c.done||c.phase==='none')return;
+  let t;
+  if(c.phase==='go')t=Math.round(performance.now()-c.t0);
+  else{clearTimers();t=900;toast('Фальстарт, штраф');}
+  c.phase='none';c.times.push(t);
+  if(c.times.length<3){render();return;}
+  finishReact();
+}
+function finishReact(){
+  const c=S.contest,al=alive();
+  const avg=Math.round(c.times.reduce((a,b)=>a+b,0)/3);
+  al.forEach(p=>{c.scores[p.id]=p.id===0?avg:260+rnd(420);c.labels[p.id]=c.scores[p.id]+' мс';});
+  al.filter(p=>p.id!==0).forEach(p=>S.botPts[p.id]+=c.scores[p.id]<420?2:1);
+  const best=Math.min(...al.map(p=>c.scores[p.id]));
+  c.winner=al.find(p=>c.scores[p.id]===best).id;S.immune=c.winner;
+  if(avg<450)addPts(1,'Быстрая реакция');
+  if(c.winner===0){addPts(2,'Победа в конкурсе','Меткий палец');}
+  c.done=true;render();
+}
+
+/* ---------- голосование ---------- */
+function tallyVotes(myChoice){
+  const votes={};
+  const al=alive(),badOnes=al.filter(bad);
+  if(me().alive)votes[0]=myChoice;
+  al.filter(p=>p.id!==0).forEach(b=>{
+    const options=al.filter(p=>p.id!==b.id&&p.id!==S.immune);
+    let t;
+    if(bad(b))t=pick(options.filter(p=>!bad(p)))||pick(options);
+    else{
+      const hit=badOnes.filter(x=>options.includes(x));
+      t=(Math.random()<.55&&hit.length)?pick(hit):pick(options);
+    }
+    votes[b.id]=t.id;
+  });
+  const count={};Object.values(votes).forEach(id=>{if(id>=0)count[id]=(count[id]||0)+1;});
+  const top=Math.max(0,...Object.values(count));
+  const leaders=Object.keys(count).filter(k=>count[k]===top).map(Number);
+  S.tally={count,votes};
+  S.executed=leaders.length===1&&top>0?P(leaders[0]):null;
+  Object.entries(votes).forEach(([id,t])=>{if(+id!==0&&t>=0&&bad(P(t)))S.botPts[+id]+=3;});
+  if(S.executed)S.executed.alive=false;
+  const mv=myChoice!==null&&myChoice>=0?P(myChoice):null;
+  if(me().alive||S.executed&&S.executed.id===0){if(mv&&bad(mv))addPts(3,'Голос против диверсанта','Зоркий глаз');}
+  al.forEach(p=>{if(p.id!==0&&p.alive)S.botPts[p.id]+=1;});
+}
+function runSpectate(includeNight){
+  const lines=[];
+  if(includeNight){
+    S.night={};S.event=null;resolveNight();
+    lines.push(S.saved?'Ночью диверсия сорвалась: механик успел починить машину.':`Ночью выбывает ${esc(S.victim.name)}, роль: ${ROLES[S.victim.role].n}.`);
+    if(winner()){S.spec={lines,end:true};return;}
+  }
+  S.immune=null;tallyVotes(null);
+  lines.push(S.executed?`Днём лагерь исключил игрока: ${esc(S.executed.name)}, роль: ${ROLES[S.executed.role].n}.`:'Днём голоса разошлись, никого не исключили.');
+  S.spec={lines,end:!!winner()};
+}
+function finalScoring(){setTimeout(()=>{const b=STORE.get('best',0);if(total()>b)STORE.set('best',total());const g=STORE.get('games',0);STORE.set('games',g+1);},0);
+  const w=winner(),myBad=bad(me());
+  if(me().alive){addPts(2,'Дожил до конца игры','Выживший');}
+  if((w==='saboteurs')===myBad)addPts(4,'Победа твоей стороны');
+}
+
+newGame(false);render();
+</script>
+</body>
+</html>
