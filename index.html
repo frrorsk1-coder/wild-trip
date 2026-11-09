@@ -110,6 +110,9 @@ td.n{text-align:right;font-weight:700;color:var(--amber)}
 label.btn{display:flex;align-items:center;justify-content:center}
 .bigq{font-size:44px;text-align:center;padding:14px 8px;background:var(--ink2);border:1px solid var(--line);border-radius:14px;letter-spacing:.06em;font-family:var(--display);word-break:break-word}
 .bigq.txt{font-family:var(--body);font-size:20px;letter-spacing:0;font-weight:500;line-height:1.35}
+.invite{border-color:var(--amber)}
+.bigcode{font-family:var(--display);font-size:40px;letter-spacing:.18em;color:var(--amber);text-align:center;padding:6px 0}
+.linkbox{width:100%;min-height:44px;font-size:14px;color:var(--sand);background:var(--ink);user-select:all;-webkit-user-select:all}
 .otimer{color:var(--amber);text-transform:none;letter-spacing:0}
 .sdisp{font-family:var(--display);font-size:64px;text-align:center;color:var(--amber);font-variant-numeric:tabular-nums;padding:8px 0}
 </style>
@@ -967,10 +970,9 @@ function rlobby(){
   const st=O.st;const host=st.host===st.me;const humans=st.players.filter(p=>!p.bot);
   const need=Math.max(0,5-humans.length);
   return `${scene('night')}<div class="body">
-  <span class="tag">Лагерь ${esc(st.code)}</span><h2>Собираем экспедицию</h2>
+  <h2>Собираем экспедицию</h2>${oinviteCard()}
   <div class="card"><div class="list">${humans.map(p=>`<div class="photorow">${oav(p,44)}<span class="nm">${esc(p.name)}${p.id===st.host?' · ведущий':''}${p.id===st.me?' (ты)':''}</span></div>`).join('')}</div></div>
-  <div class="row"><button class="btn" style="flex:1" data-a="oinvite">Позвать друзей</button>
-  <label class="btn ghost" style="flex:1">${O.photos[st.me]?'Сменить фото':'Своё фото'}<input type="file" accept="image/*" hidden data-ophoto="1" aria-label="Своё фото"></label></div>
+  <div class="row"><label class="btn ghost" style="flex:1">${O.photos[st.me]?'Сменить фото':'Своё фото'}<input type="file" accept="image/*" hidden data-ophoto="1" aria-label="Своё фото"></label></div>
   <p class="muted" style="font-size:14px">Фото увидят только игроки этого лагеря. После игры оно удаляется с сервера.</p>
   ${host?`<button class="btn" data-a="ostart" data-v="0" ${need?'disabled':''}>${need?`Нужно ещё ${need}`:'Начать игру'}</button>
   ${need?`<button class="btn ghost" data-a="ostart" data-v="1">Начать, добрав ${need} ботов</button>`:''}`
@@ -980,6 +982,21 @@ function rlobby(){
 }
 
 /* ---------- ночь ---------- */
+function oinviteCard(){
+  const L=O.link;
+  return `<div class="card invite"><span class="tag">Код лагеря</span><div class="bigcode">${esc(O.st.code)}</div>
+  ${L?`<p class="muted" style="font-size:14px;margin:6px 0">Ссылка-приглашение: друзья нажимают на неё и сразу попадают в твой лагерь.</p>
+  <input id="olink" class="linkbox" readonly value="${esc(L)}" aria-label="Ссылка-приглашение" onclick="this.select()">
+  <div class="row" style="margin-top:8px"><button class="btn" style="flex:1" data-a="ocopy">Скопировать ссылку</button><button class="btn ghost" style="flex:1" data-a="oinvite">Отправить в Telegram</button></div>`
+  :`<p class="muted" style="font-size:14px;margin-top:6px">Скажи друзьям этот код: они открывают игру и вводят его в поле «Код лагеря».</p>`}</div>`;
+}
+function ocopyLink(){
+  const L=O.link;if(!L)return;
+  const done=()=>{toast('Ссылка скопирована. Вставь её в чат с друзьями');haptic('success');const b=document.querySelector('[data-a=ocopy]');if(b){b.textContent='Скопировано ✓';setTimeout(()=>{if(b.isConnected)b.textContent='Скопировать ссылку';},2500);}};
+  const old=()=>{const i=$('#olink');if(!i){toast(L);return;}i.focus();i.select();i.setSelectionRange(0,L.length);
+    let ok=false;try{ok=document.execCommand('copy');}catch(e){}ok?done():toast('Выдели ссылку и скопируй её вручную');};
+  try{if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(L).then(done,old);else old();}catch(e){old();}
+}
 function rnight(){
   const st=O.st,me=ome(),role=st.my.role,n=st.night||{};
   const task=st.my.task?`<div class="task ${st.my.task.done?'done':''}"><b>Тайное задание раунда</b><br>${esc(st.my.task.text)} За выполнение 2 очка.</div>`:'';
@@ -1160,6 +1177,7 @@ Object.assign(ACT,{
   oinvite:()=>{const link=O.link;if(!link){toast('Код лагеря: '+O.code);return;}
     const url='https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent('Заходи в мой лагерь «Дикой поездки»: мафия у костра в степи! Код '+O.code);
     if(TG.w&&TG.w.openTelegramLink)TG.w.openTelegramLink(url);else{try{navigator.clipboard.writeText(link);toast('Ссылка скопирована');}catch(e){toast(link);}}},
+  ocopy:()=>ocopyLink(),
   ostart:v=>osend({t:'start',bots:v==='1'}),
   onight:v=>{osend({t:'night',target:+v});haptic('light');},
   opad:v=>opad(+v),
