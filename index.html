@@ -948,7 +948,7 @@ function readyBtn(label){const st=O.st;const hs=st.players.filter(p=>p.alive&&!p
 /* ---------- меню ---------- */
 function rmenu(){
   const on=canOnline();
-  return `${topbar0()}${scene('night')}<div class="body">
+  return `${scene('night')}<div class="body">
   <h1>Ночной заезд</h1>
   ${TG.user?`<p class="muted">Привет, ${esc(TG.user.first_name||'путник')}!</p>`:''}
   <p class="story"><small>Рассказчик</small>Экспедиция встала лагерем в степи. Среди вас диверсанты: каждую ночь один квадроцикл выходит из строя. Днём у костра лагерь ищет виновных, между раундами конкурсы, у каждого тайное задание.</p>

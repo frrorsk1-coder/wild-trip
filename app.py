@@ -30,11 +30,12 @@ BOT_TOKEN = "".join((os.getenv("BOT_TOKEN") or "").split())
 PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")
 APP_SHORT = os.getenv("APP_SHORT", "Game")
 DEV_AUTH = os.getenv("DEV_AUTH") == "1"
+TG_PROXY = os.getenv("TG_PROXY", "")          # например socks5://user:pass@host:port, если Telegram API недоступен напрямую
 
 ROOMS: dict[str, Room] = {}
 SOCKETS: dict[int, set[web.WebSocketResponse]] = {}   # id игрока → открытые соединения
 WHERE: dict[int, str] = {}                            # id игрока → код комнаты
-BOT_USERNAME = ""
+BOT_USERNAME = os.getenv("BOT_USERNAME", "")
 
 
 # ---------- проверка, что данные пришли из Telegram ----------
@@ -248,8 +249,12 @@ async def run_bot() -> None:
     os.environ["WEBAPP_URL"] = PUBLIC_URL + "/"
     import legacy_bot  # классическая «Мафия» в группе: /mafia, /go, /stop
 
-    bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    me = await bot.get_me()
+    session = None
+    if TG_PROXY:
+        from aiogram.client.session.aiohttp import AiohttpSession
+        session = AiohttpSession(proxy=TG_PROXY)
+    bot = Bot(BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    me = await asyncio.wait_for(bot.get_me(), 20)
     BOT_USERNAME = me.username
     r = Router()
 
@@ -299,6 +304,19 @@ async def run_bot() -> None:
     await dp.start_polling(bot, handle_signals=False)
 
 
+async def bot_forever() -> None:
+    """Бот нужен только для команд в чате. Если Telegram API недоступен, игра работает без него,
+    а попытки подключиться повторяются раз в 10 минут."""
+    while True:
+        try:
+            await run_bot()
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:  # сеть, неверный токен и т.п.
+            log.warning("Бот не подключился к Telegram (%s). Игра работает, повтор через 10 минут.", type(e).__name__)
+        await asyncio.sleep(600)
+
+
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     app = make_app()
@@ -309,7 +327,7 @@ async def main() -> None:
     log.info("Сервер игры слушает порт %s", port)
     tasks = [asyncio.create_task(janitor())]
     if BOT_TOKEN:
-        tasks.append(asyncio.create_task(run_bot()))
+        tasks.append(asyncio.create_task(bot_forever()))
     else:
         log.warning("BOT_TOKEN не задан: бот не запущен, вход в игру только в режиме DEV_AUTH")
     await asyncio.gather(*tasks)
